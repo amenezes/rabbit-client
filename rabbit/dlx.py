@@ -70,5 +70,8 @@ class DLX:
         await self.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=self.dlq_queue.name,
-            routing_key=self.routing_key
+            routing_key=self.get_routing_key()
         )
+
+    def get_routing_key(self, filter='.dlq'):
+        return self.dlq_queue.name.split(filter)[0]

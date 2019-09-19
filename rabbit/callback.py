@@ -5,13 +5,12 @@ import aioamqp
 
 from rabbit.event import Event
 from rabbit.exchange import Exchange
-# from rabbit.task import Task
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
-async def reconnect_callback(self, exception):
+async def reconnect_callback(exception):
     """Reconnect on RabbitMQ callback."""
     try:
         logging.error("Error to connect with message broker, a new attempt will occur in 10 seconds.")
@@ -19,9 +18,11 @@ async def reconnect_callback(self, exception):
         await self.error_callback_action()
     except aioamqp.exceptions.SynchronizationError:
         pass
+    except OSError:
+        pass
 
 
-async def process_event_callback(self, channel, body, envelope, properties):
+async def process_event_callback(channel, body, envelope, properties):
     try:
         # await self.task.execute()
         event = Event(
@@ -35,7 +36,7 @@ async def process_event_callback(self, channel, body, envelope, properties):
         await self.process_error_callback(cause, event)
 
 
-async def process_error_callback(self, exception_type, event):
+async def process_error_callback(exception_type, event):
     logging.error(f'Error to process the event: {exception_type}')
     event = Event(
         channel=event.channel,

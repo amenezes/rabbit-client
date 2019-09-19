@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/amenezes/rabbit-client.svg?branch=master)](https://travis-ci.org/amenezes/rabbit-client)
 [![Maintainability](https://api.codeclimate.com/v1/badges/f24caeb9d85f17de93e2/maintainability)](https://codeclimate.com/github/amenezes/rabbit-client/maintainability)
 [![codecov](https://codecov.io/gh/amenezes/rabbit-client/branch/master/graph/badge.svg)](https://codecov.io/gh/amenezes/rabbit-client)
+[![PyPI version](https://badge.fury.io/py/rabbit-client.svg)](https://badge.fury.io/py/rabbit-client)
 
 # rabbit-client
 
@@ -45,7 +46,8 @@ SUBSCRIBE_TOPIC=#
 SUBSCRIBE_QUEUE=default.subscribe.queue
 
 # dlx
-DQL_QUEUE=default.in.exchange.dlq
+DLX_EXCHANGE=DLX
+DQL_QUEUE=default.subscribe.queue.dlq
 SUBSCRIBE_EXCHANGE=default.in.exchange
 SUBSCRIBE_TOPIC=#
 ```

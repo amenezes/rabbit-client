@@ -1,8 +1,8 @@
 import unittest
 
-from rabbit.exchange import Exchange
-
 import attr
+
+from rabbit.exchange import Exchange
 
 
 class TestExchange(unittest.TestCase):
