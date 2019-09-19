@@ -7,7 +7,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 @attr.s(slots=True, frozen=True)
-class Queues:
+class Queue:
 
     name = attr.ib(
         type=str,
@@ -17,11 +17,6 @@ class Queues:
         type=bool,
         default=True,
         validator=attr.validators.instance_of(bool)
-    )
-    suffix = attr.ib(
-        type=str,
-        default='',
-        validator=attr.validators.instance_of(str)
     )
     arguments = attr.ib(
         type=dict,

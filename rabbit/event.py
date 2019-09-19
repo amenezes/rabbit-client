@@ -2,6 +2,8 @@ import logging
 
 import attr
 
+from rabbit.exchange import Exchange
+
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -63,12 +65,12 @@ class Event:
     async def reject(self):
         await self.channel.basic_client_nack(
             delivery_tag=self.envelope.delivery_tag,
-            requeue=requeue
+            requeue=self.requeue
         )
-    
+
     async def ack(self):
         await self.channel.basic_client_ack(
-            delivery_tag=envelope.delivery_tag
+            delivery_tag=self.envelope.delivery_tag
         )
 
     # async def get_timeout(headers, delay=5000):

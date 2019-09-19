@@ -1,30 +1,24 @@
 .DEFAULT_GOAL := about
-RABBIT_INSTANCE := $(shell docker-compose ps | grep rabbit | wc -l)
+RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
 
 flake:
-	@echo "--- code style checking ---"
-	flake8 app
+	@echo "> code style checking"
+	flake8 rabbit
 	flake8 tests
 
 clean:
-	@echo "--- cleaning development environment ---"
-	docker-compose down -v
+	@echo "> cleaning development environment"
+	docker-compose -f example/docker-compose.yml down -v
 	docker system prune -f
 
 tests:
-	@echo "--- unittest ---"
+	@echo "> unittest"
 ifeq ($(RABBIT_INSTANCE), 0)
-	docker-compose up -d rabbit
+	docker-compose -f example/docker-compose.yml up -d rabbit
 	sleep 10
 endif
-ifeq ($(POSTGRES_INSTANCE), 0)
-	docker-compose up -d postgres
-	sleep 10
-endif
-	@echo "--- applying database migrations ---"
-	alembic -c app/alembic.ini -n local_db upgrade head
-	sleep 10
-	python -m pytest -v --cov-report xml --cov-report term --cov=app tests
+	@echo "> applying database migrations"
+	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
 
 doc: 
 	@echo "> generate project documentation..."
@@ -32,19 +26,25 @@ doc:
 install-deps:
 	@echo "> installing dependencies..."
 	pip install -r requirements-dev.txt
-ifeq ($(STFDIGITAL_SHARED), 1)
-	git clone git@gitlab.com:supremotribunalfederal/stfdigital/integracoes/shared.git
-endif
 
 venv:
 	@echo "> preparing local development environment"
 	pip install virtualenv
 	virtualenv venv
 
-
+about:
+	@echo "> rabbit-client"
+	@echo ""
+	@echo "make flake        - Flake8 lint."
+	@echo "make tests        - Execute tests."
+	@echo "make doc          - Generate project documentation."
+	@echo "make install-deps - Install development dependencies."
+	@echo "make venv         - Install virtualenv and create venv directory."
+	@echo ""
+	@echo "mailto: alexandre.fmenezes@gmail.com"
 
 ci:
-	@echo ""
+	@echo "> "
 
 all: flake tests doc docker-pub clean
 

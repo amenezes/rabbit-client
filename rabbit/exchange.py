@@ -22,3 +22,8 @@ class Exchange:
         default='',
         validator=attr.validators.instance_of(str)
     )
+    durable = attr.ib(
+        type=bool,
+        default=True,
+        validator=attr.validators.instance_of(bool)
+    )

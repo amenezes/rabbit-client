@@ -1,0 +1,19 @@
+version: '2'
+plugins:
+  duplication:
+    enabled: true
+    config:
+      languages:
+        - python:
+  fixme:
+    enabled: true
+  radon:
+    enabled: true
+  pep8:
+    enabled: true
+  bandit:
+    enabled: true
+    config:
+      python_version: 3
+exclude_patterns:
+- "venv"
