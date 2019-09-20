@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from aiohttp import web
 
@@ -14,21 +13,20 @@ async def handle_status(request):
     return web.json_response({'status': 'UP'})
 
 
-async def configure(app):
-    client = AioRabbitClient()
-    app.loop.create_task(client.connect())
-    app.loop.create_task(client.configure())
+def configure(app):
+    client = AioRabbitClient(app.loop)
+    app.loop.run_until_complete(client.connect())
+    # app.loop.run_until_complete(client.configure())
+    app['rabbit_client'] = client
 
 
-async def shutdown_server(app):
-    app.loop.close()
-
-
-app = web.Application()
-app.on_startup.append(configure)
-app.on_shutdown.append(shutdown_server)
+loop = asyncio.get_event_loop()
+app = web.Application(loop=loop)
 app.add_routes([
     web.get('/manage/health', handle_status),
     web.get('/manage/info', handle_info)
 ])
+configure(app)
+# app.loop.call_soon(app['rabbit_client'], configure(app))
+app.loop.run_until_complete(app['rabbit_client'].configure())
 web.run_app(app, host='0.0.0.0', port=5000)

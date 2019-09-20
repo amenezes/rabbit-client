@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import os
 
 from aioamqp.channel import Channel
@@ -6,6 +8,9 @@ import attr
 
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
+
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 @attr.s(slots=True)
@@ -46,27 +51,41 @@ class DLX:
         default=os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange'),
         validator=attr.validators.instance_of(str)
     )
+    properties = attr.ib(
+        type=dict,
+        default={
+            'expiration': f'{5000}',
+            'headers': {
+                'x-delay': f'{5000}',
+                'x-exception-message': '',
+                'x-original-exchange': '',
+                'x-original-routingKey': ''
+            }
+        },
+        validator=attr.validators.instance_of(dict)
+    )
 
     async def configure(self):
-        await self.configure_exchange()
-        await self.configure_queue()
-        await self.configure_queue_bind()
+        await self._configure_exchange()
+        await self._configure_queue()
+        await self._configure_queue_bind()
 
-    async def configure_exchange(self):
+    async def _configure_exchange(self):
         await self.channel.exchange_declare(
             exchange_name=self.dlx_exchange.name,
             type_name=self.dlx_exchange.exchange_type,
             durable=self.dlx_exchange.durable
         )
+        asyncio.sleep(2)
 
-    async def configure_queue(self):
+    async def _configure_queue(self):
         await self.channel.queue_declare(
             queue_name=self.dlq_queue.name,
             durable=self.dlq_queue.durable,
             arguments=self.dlq_queue.arguments
         )
 
-    async def configure_queue_bind(self):
+    async def _configure_queue_bind(self):
         await self.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=self.dlq_queue.name,
@@ -75,3 +94,12 @@ class DLX:
 
     def get_routing_key(self, filter='.dlq'):
         return self.dlq_queue.name.split(filter)[0]
+
+    async def send_event(self, cause, body, envelope, properties, subscribe_queue):
+        logging.error(f'Error to process event: {cause}')
+        await self.channel.publish(
+            body,
+            self.dlx_exchange.name,
+            subscribe_queue,
+            self.properties
+        )

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -5,9 +6,10 @@ from aioamqp.channel import Channel
 
 import attr
 
-from rabbit.callback import process_event_callback
+from rabbit.dlx import DLX
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
+from rabbit.task import Task
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -39,27 +41,37 @@ class Subscribe:
         ),
         validator=attr.validators.instance_of(Queue)
     )
-    callback = attr.ib(default=process_event_callback)
+    dlx = attr.ib(
+        type=DLX,
+        default=DLX(),
+        validator=attr.validators.instance_of(DLX)
+    )
+    task = attr.ib(
+        type=Task,
+        default=Task()
+    )
 
     async def configure(self):
-        await self.configure_exchange()
-        await self.configure_queue()
-        await self.configure_queue_bind()
+        await self._configure_exchange()
+        await self._configure_queue()
+        await self._configure_queue_bind()
+        await self._configure_dlx()
 
-    async def configure_exchange(self):
+    async def _configure_exchange(self):
         await self.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable
         )
+        await asyncio.sleep(2)
 
-    async def configure_queue(self):
+    async def _configure_queue(self):
         await self.channel.queue_declare(
             queue_name=self.queue.name,
             durable=self.queue.durable
         )
 
-    async def configure_queue_bind(self):
+    async def _configure_queue_bind(self):
         await self.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
@@ -68,4 +80,31 @@ class Subscribe:
         await self.channel.basic_consume(
             callback=self.callback,
             queue_name=self.queue.name
+        )
+
+    async def _configure_dlx(self):
+        self.dlx.channel = self.channel
+        await self.dlx.configure()
+
+    async def callback(self, channel, body, envelope, properties):
+        print(channel)
+        print(body)
+        print(envelope)
+        print(properties)
+        try:
+            await self.task.execute(body)
+            await self.ack_event(envelope)
+        except Exception as cause:
+            await self.dlx.send_event(cause, body, envelope, properties, self.queue.name)
+            await self.reject_event(envelope)
+
+    async def reject_event(self, envelope, requeue=False):
+        await self.channel.basic_client_nack(
+            delivery_tag=envelope.delivery_tag,
+            requeue=requeue
+        )
+
+    async def ack_event(self, envelope):
+        await self.channel.basic_client_ack(
+            delivery_tag=envelope.delivery_tag
         )

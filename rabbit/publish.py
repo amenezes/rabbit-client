@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -39,26 +40,35 @@ class Publish:
     )
 
     async def configure(self):
-        await self.configure_exchange()
-        await self.configure_queue()
-        await self.configure_queue_bind()
+        await self._configure_exchange()
+        await self._configure_queue()
+        await self._configure_queue_bind()
 
-    async def configure_exchange(self):
+    async def _configure_exchange(self):
         await self.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable
         )
+        await asyncio.sleep(2)
 
-    async def configure_queue(self):
+    async def _configure_queue(self):
         await self.channel.queue_declare(
             queue_name=self.queue.name,
             durable=self.queue.durable
         )
 
-    async def configure_queue_bind(self):
+    async def _configure_queue_bind(self):
         await self.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
             routing_key=self.exchange.topic
+        )
+
+    async def send_event(self, payload, **kwargs):
+        await self.channel.publish(
+            payload=payload,
+            exchange_name=self.exchange.name,
+            routing_key=self.exchange.topic,
+            **kwargs
         )

@@ -7,7 +7,6 @@ from aioamqp.channel import Channel
 
 import attr
 
-from rabbit.dlx import DLX
 from rabbit.publish import Publish
 from rabbit.subscribe import Subscribe
 
@@ -39,11 +38,6 @@ class AioRabbitClient:
         default=Subscribe(),
         validator=attr.validators.instance_of(Subscribe)
     )
-    dlx = attr.ib(
-        type=DLX,
-        default=DLX(),
-        validator=attr.validators.instance_of(DLX)
-    )
     _channel = attr.ib(
         type=Channel,
         default=None,
@@ -52,14 +46,22 @@ class AioRabbitClient:
         ),
         init=False
     )
+    _protocol = attr.ib(
+        default=None,
+        init=False
+    )
 
     @property
     def channel(self):
         return self._channel
 
+    @property
+    def protocol(self):
+        return self._protocol
+
     async def connect(self):
-        protocol = await self._get_protocol_connection()
-        self._channel = await protocol.channel()
+        self._protocol = await self._get_protocol_connection()
+        self._channel = await self._protocol.channel()
         await self._configure_pub_sub()
 
     async def _get_protocol_connection(self):
@@ -84,6 +86,7 @@ class AioRabbitClient:
             logging.error("Error to connect with message broker, a new attempt will occur in 10 seconds.")
             await asyncio.sleep(10)
             await self.connect()
+            await self.configure()
         except aioamqp.exceptions.SynchronizationError:
             pass
         except Exception:
@@ -92,47 +95,15 @@ class AioRabbitClient:
     async def _configure_pub_sub(self):
         self.publish.channel = self._channel
         self.subscribe.channel = self._channel
-        self.dlx.channel = self._channel
 
     async def configure(self):
         logging.info('Configurando o message broker...')
-        await self.configure_exchange()
-        await self.configure_queue()
-        await self.configure_bind()
+        await self.configure_subscribe()
+        await self.configure_publish()
         logging.info('Successfully.')
 
     async def configure_subscribe(self):
-        await self.configure_subscribe_exchange()
-        await self.subscribe.configure_queue()
-        await self.dlx.configure_queue()
-        await self.subscribe.configure_queue_bind()
-        await self.dlx.configure_queue_bind()
-    
+        await self.subscribe.configure()
+
     async def configure_publish(self):
-        await self.publish.configure_exchange()
-        await asyncio.sleep(2)
-        await self.publish.configure_queue()
-        await self.publish.configure_queue_bind()
-
-    async def configure_subscribe_exchange(self):
-        logging.info('Configurando as exchanges...')
-        await self.subscribe.configure_exchange()
-        await self.dlx.configure_exchange()
-        await asyncio.sleep(2)
-    
-    async def configure_publish_exchange(self):
-        logging.info('Configurando as exchanges...')
-        await self.publish.configure_exchange()
-        await asyncio.sleep(2)
-
-    # async def configure_queue(self):
-    #     logging.info('Configurando as queues...')
-    #     await self.subscribe.configure_queue()
-    #     await self.publish.configure_queue()
-    #     await self.dlx.configure_queue()
-
-    # async def configure_bind(self):
-    #     logging.info('Configurando o binding das queues...')
-    #     await self.subscribe.configure_queue_bind()
-    #     await self.publish.configure_queue_bind()
-    #     await self.dlx.configure_queue_bind()
+        await self.publish.configure()
