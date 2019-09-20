@@ -61,7 +61,8 @@ class Subscribe:
     )
     task = attr.ib(
         type=Task,
-        default=Task()
+        default=Task(),
+        validator=attr.validators.instance_of(Task)
     )
 
     async def configure(self):
@@ -99,13 +100,16 @@ class Subscribe:
         self.dlx.channel = self.channel
         await self.dlx.configure()
 
+    @staticmethod
+    def p(data, **kwargs):
+        print(data)
+        print(kwargs)
+
     async def callback(self, channel, body, envelope, properties):
-        print(channel)
-        print(body)
-        print(envelope)
-        print(properties)
         try:
-            await self.task.execute(body)
+            # await self.task.execute(self.p, body, envelope=envelope)
+            self.task.job = self.p
+            await self.task.execute(body, envelope=envelope)
             await self.ack_event(envelope)
         except Exception as cause:
             await self.dlx.send_event(cause, body, envelope, properties)
