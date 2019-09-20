@@ -25,6 +25,7 @@ r = AioRabbitClient(
 )
 loop.run_until_complete(r.connect())
 loop.run_until_complete(r.configure_publish())
+print(f"[>] Event sent to exchange: [{os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange')}]")
 
 payload = {
     'documento': 1,

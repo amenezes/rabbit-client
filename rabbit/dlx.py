@@ -16,6 +16,14 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 @attr.s(slots=True)
 class DLX:
 
+    dlq_queue = attr.ib(
+        type=Queue,
+        validator=attr.validators.instance_of(Queue)
+    )
+    routing_key = attr.ib(
+        type=str,
+        validator=attr.validators.instance_of(str)
+    )
     channel = attr.ib(
         type=Channel,
         default=None,
@@ -30,39 +38,6 @@ class DLX:
             exchange_type=os.getenv('DLX_TYPE', 'direct')
         ),
         validator=attr.validators.instance_of(Exchange)
-    )
-    dlq_queue = attr.ib(
-        type=Queue,
-        default=Queue(
-            name=os.getenv('DQL_QUEUE', 'default.in.exchange.dlq'),
-            arguments={
-                'x-dead-letter-exchange': os.getenv(
-                    'SUBSCRIBE_EXCHANGE', 'default.in.exchange'
-                ),
-                'x-dead-letter-routing-key': os.getenv(
-                    'SUBSCRIBE_TOPIC', '#'
-                )
-            }
-        ),
-        validator=attr.validators.instance_of(Queue)
-    )
-    routing_key = attr.ib(
-        type=str,
-        default=os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange'),
-        validator=attr.validators.instance_of(str)
-    )
-    properties = attr.ib(
-        type=dict,
-        default={
-            'expiration': f'{5000}',
-            'headers': {
-                'x-delay': f'{5000}',
-                'x-exception-message': '',
-                'x-original-exchange': '',
-                'x-original-routingKey': ''
-            }
-        },
-        validator=attr.validators.instance_of(dict)
     )
 
     async def configure(self):
@@ -80,7 +55,7 @@ class DLX:
 
     async def _configure_queue(self):
         await self.channel.queue_declare(
-            queue_name=self.dlq_queue.name,
+            queue_name=self._ensure_endswith_dlq(self.dlq_queue.name),
             durable=self.dlq_queue.durable,
             arguments=self.dlq_queue.arguments
         )
@@ -88,18 +63,55 @@ class DLX:
     async def _configure_queue_bind(self):
         await self.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
-            queue_name=self.dlq_queue.name,
-            routing_key=self.get_routing_key()
+            queue_name=self._ensure_endswith_dlq(self.dlq_queue.name),
+            routing_key=self.routing_key
         )
 
-    def get_routing_key(self, filter='.dlq'):
-        return self.dlq_queue.name.split(filter)[0]
+    def _remove_invalid_queue_extension(self, value):
+        if value.rfind('.') > 0:
+            value = value.replace(
+                value[value.rfind('.'):],
+                ''
+            )
+        return value
 
-    async def send_event(self, cause, body, envelope, properties, subscribe_queue):
+    def _ensure_endswith_dlq(self, value):
+        if not value.endswith('.dlq'):
+            value = f'{value}.dlq'
+        return value
+
+    def _get_properties(self,
+                        timeout,
+                        exception_message,
+                        original_exchange,
+                        original_routing_key):
+        properties = {
+            'expiration': f'{timeout}',
+            'headers': {
+                'x-delay': f'{timeout}',
+                'x-exception-message': f'{exception_message}',
+                'x-original-exchange': f'{original_exchange}',
+                'x-original-routingKey': f'{original_routing_key}'
+            }
+        }
+        return properties
+
+    async def send_event(self, cause, body, envelope, properties):
         logging.error(f'Error to process event: {cause}')
+        timeout = await self._get_timeout(properties.headers)
         await self.channel.publish(
             body,
             self.dlx_exchange.name,
-            subscribe_queue,
-            self.properties
+            self.dlq_queue.name,
+            self._get_properties(
+                timeout,
+                cause,
+                envelope.exchange_name,
+                envelope.routing_key
+            )
         )
+
+    async def _get_timeout(self, headers, delay=5000):
+        if (headers is not None) and ('x-delay' in headers):
+            delay = headers['x-delay']
+        return int(delay) * 5

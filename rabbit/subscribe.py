@@ -43,7 +43,20 @@ class Subscribe:
     )
     dlx = attr.ib(
         type=DLX,
-        default=DLX(),
+        default=DLX(
+            dlq_queue=Queue(
+                name=os.getenv('SUBSCRIBE_QUEUE', 'default.subscribe.queue'),
+                arguments={
+                    'x-dead-letter-exchange': os.getenv(
+                        'SUBSCRIBE_EXCHANGE', 'default.in.exchange'
+                    ),
+                    'x-dead-letter-routing-key': os.getenv(
+                        'SUBSCRIBE_TOPIC', '#'
+                    )
+                }
+            ),
+            routing_key=os.getenv('SUBSCRIBE_QUEUE', 'default.subscribe.queue')
+        ),
         validator=attr.validators.instance_of(DLX)
     )
     task = attr.ib(
@@ -95,7 +108,7 @@ class Subscribe:
             await self.task.execute(body)
             await self.ack_event(envelope)
         except Exception as cause:
-            await self.dlx.send_event(cause, body, envelope, properties, self.queue.name)
+            await self.dlx.send_event(cause, body, envelope, properties)
             await self.reject_event(envelope)
 
     async def reject_event(self, envelope, requeue=False):
