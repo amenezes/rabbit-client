@@ -38,3 +38,10 @@ class Task:
         completed, *_ = await asyncio.wait(task)
         results = [t.result() for t in completed]
         return results
+
+    @staticmethod
+    def echo_job(*args, **kwargs):
+        return dict(
+            positional_arguments=args,
+            keyword_arguments=kwargs
+        )

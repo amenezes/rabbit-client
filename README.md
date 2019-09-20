@@ -79,7 +79,7 @@ pip install -r requirements-dev.txt
 
 To execute tests just run:
 ```bash
-python -m pytest -v --cov-report term --cov= tests
+python -m pytest -v --cov-report term --cov=rabbit tests
 ```
 
 ## Links
