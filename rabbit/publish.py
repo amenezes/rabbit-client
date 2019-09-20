@@ -8,7 +8,6 @@ import attr
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
-
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
@@ -42,6 +41,7 @@ class Publish:
     async def configure(self):
         await self.configure_exchange()
         await self.configure_queue()
+        await self.configure_queue_bind()
 
     async def configure_exchange(self):
         await self.channel.exchange_declare(

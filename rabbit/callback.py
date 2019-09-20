@@ -49,5 +49,5 @@ async def process_error_callback(exception_type, event):
         properties=event.properties,
         timeout=event.timeout * 5
     )
-    await event.publish(self.subscribe.queue.name)
+    await event.publish(subscribe.queue.name)
     await event.reject()
