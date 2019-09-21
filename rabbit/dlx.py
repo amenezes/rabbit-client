@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import Dict
 
 from aioamqp.channel import Channel
 
@@ -40,12 +41,12 @@ class DLX:
         validator=attr.validators.instance_of(Exchange)
     )
 
-    async def configure(self):
+    async def configure(self) -> None:
         await self._configure_exchange()
         await self._configure_queue()
         await self._configure_queue_bind()
 
-    async def _configure_exchange(self):
+    async def _configure_exchange(self) -> None:
         logging.debug(
             "Configuring DLX exchange: ["
             f"exchange_name: {self.dlx_exchange.name}] | "
@@ -59,7 +60,7 @@ class DLX:
         )
         asyncio.sleep(2)
 
-    async def _configure_queue(self):
+    async def _configure_queue(self) -> None:
         logging.debug(
             "Configuring DLX queue: ["
             f"queue_name: {self._ensure_endswith_dlq(self.dlq_queue.name)}"
@@ -72,7 +73,7 @@ class DLX:
             arguments=self.dlq_queue.arguments
         )
 
-    async def _configure_queue_bind(self):
+    async def _configure_queue_bind(self) -> None:
         logging.debug(
             "Configuring DLX queue bind: ["
             f"exchange_name: {self.dlx_exchange.name}] | "
@@ -85,16 +86,16 @@ class DLX:
             routing_key=self.routing_key
         )
 
-    def _ensure_endswith_dlq(self, value):
+    def _ensure_endswith_dlq(self, value: str) -> str:
         if not value.endswith('.dlq'):
             value = f'{value}.dlq'
         return value
 
     def _get_properties(self,
-                        timeout,
-                        exception_message,
-                        original_exchange,
-                        original_routing_key):
+                        timeout: int,
+                        exception_message: str,
+                        original_exchange: str,
+                        original_routing_key: str) -> Dict:
         properties = {
             'expiration': f'{timeout}',
             'headers': {
@@ -106,7 +107,7 @@ class DLX:
         }
         return properties
 
-    async def send_event(self, cause, body, envelope, properties):
+    async def send_event(self, cause, body, envelope, properties) -> None:
         logging.error(f'Error to process event: {cause}')
         timeout = await self._get_timeout(properties.headers)
         await self.channel.publish(
@@ -121,7 +122,7 @@ class DLX:
             )
         )
 
-    async def _get_timeout(self, headers, delay=5000):
+    async def _get_timeout(self, headers, delay: int = 5000) -> int:
         if (headers is not None) and ('x-delay' in headers):
             delay = headers['x-delay']
         return int(delay) * 5

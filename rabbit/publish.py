@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import Any
 
 from aioamqp.channel import Channel
 
@@ -40,12 +41,12 @@ class Publish:
         validator=attr.validators.instance_of(Queue)
     )
 
-    async def configure(self):
+    async def configure(self) -> None:
         await self._configure_exchange()
         await self._configure_queue()
         await self._configure_queue_bind()
 
-    async def _configure_exchange(self):
+    async def _configure_exchange(self) -> None:
         logging.debug(
             "Configuring Publish exchange: ["
             f"exchange_name: {self.exchange.name}] | "
@@ -59,7 +60,7 @@ class Publish:
         )
         await asyncio.sleep(2)
 
-    async def _configure_queue(self):
+    async def _configure_queue(self) -> None:
         logging.debug(
             "Configuring Publish queue: ["
             f"queue_name: {self.queue.name}] | "
@@ -70,7 +71,7 @@ class Publish:
             durable=self.queue.durable
         )
 
-    async def _configure_queue_bind(self):
+    async def _configure_queue_bind(self) -> None:
         logging.debug(
             "Configuring Publish queue bind: ["
             f"exchange_name: {self.exchange.name}] | "
@@ -83,7 +84,7 @@ class Publish:
             routing_key=self.exchange.topic
         )
 
-    async def send_event(self, payload, **kwargs):
+    async def send_event(self, payload: Any, **kwargs) -> None:
         await self.channel.publish(
             payload=payload,
             exchange_name=self.exchange.name,

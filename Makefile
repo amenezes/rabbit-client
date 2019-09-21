@@ -2,10 +2,12 @@
 RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
 VENV_DIR := $(shell [ ! -d "venv" ] && echo 1 || echo 0)
 
-flake:
-	@echo "> code style checking"
+lint:
+	@echo "> executing flake8 to check codestyle..."
 	flake8 rabbit
 	flake8 tests
+	@echo "> executing mypy static type checker..."
+	mypy rabbit
 
 clean:
 	@echo "> cleaning development environment"
@@ -40,7 +42,7 @@ endif
 about:
 	@echo "> rabbit-client"
 	@echo ""
-	@echo "make flake        - Flake8 lint."
+	@echo "make lint         - Runs flake8 and mypy."
 	@echo "make tests        - Execute tests."
 	@echo "make doc          - Generate project documentation."
 	@echo "make install-deps - Install development dependencies."

@@ -9,6 +9,6 @@ install:
   - pip install docker-compose
   - pip install -r requirements-dev.txt
 script:
-  - make flake
-  - make tests
-  - make ci
+  - make lint  # execute flake8 and mypy
+  - make tests # execute unit and integration tests
+  - make ci    # publishes tests reports

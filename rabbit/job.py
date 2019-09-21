@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 
 import attr
 
@@ -10,7 +11,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 class SampleJob:
 
     @staticmethod
-    def echo_job(*args, **kwargs):
+    def echo_job(*args, **kwargs) -> Dict[str, Any]:
         logging.info(
             'Using the standard callable to process subscribe events.'
         )

@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import os
+from typing import Any, Tuple
 
 import aioamqp
 from aioamqp.channel import Channel
+from aioamqp.protocol import AmqpProtocol
 
 import attr
 
@@ -25,7 +27,7 @@ class AioRabbitClient:
     )
     port = attr.ib(
         type=int,
-        default=os.getenv('BROKER_PORT', 5672),
+        default=int(os.getenv('BROKER_PORT', 5672)),
         validator=attr.validators.instance_of(int)
     )
     publish = attr.ib(
@@ -52,19 +54,19 @@ class AioRabbitClient:
     )
 
     @property
-    def channel(self):
+    def channel(self) -> Channel:
         return self._channel
 
     @property
     def protocol(self):
         return self._protocol
 
-    async def connect(self, **kwargs):
+    async def connect(self, **kwargs) -> None:
         self._protocol = await self._get_protocol_connection(**kwargs)
         self._channel = await self._protocol.channel()
         await self._configure_pub_sub()
 
-    async def _get_protocol_connection(self, **kwargs):
+    async def _get_protocol_connection(self, **kwargs) -> AmqpProtocol:
         protocol = None
         try:
             *_, protocol = await aioamqp.connect(
@@ -81,7 +83,7 @@ class AioRabbitClient:
 
         return protocol
 
-    async def on_error_callback(self, exception):
+    async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
         """Reconnect on RabbitMQ callback."""
         try:
             logging.error(
@@ -96,18 +98,19 @@ class AioRabbitClient:
         except Exception:
             pass
 
-    async def _configure_pub_sub(self):
+    async def _configure_pub_sub(self) -> None:
         self.publish.channel = self._channel
         self.subscribe.channel = self._channel
 
-    async def configure(self):
+    async def configure(self) -> None:
+        """Alias to configure subscribe and configure publish."""
         logging.info('Configuring the message broker...')
         await self.configure_subscribe()
         await self.configure_publish()
         logging.info('Message broker successfully configured.')
 
-    async def configure_subscribe(self):
+    async def configure_subscribe(self) -> None:
         await self.subscribe.configure()
 
-    async def configure_publish(self):
+    async def configure_publish(self) -> None:
         await self.publish.configure()

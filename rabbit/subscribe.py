@@ -3,6 +3,8 @@ import logging
 import os
 
 from aioamqp.channel import Channel
+from aioamqp.envelope import Envelope
+from aioamqp.properties import Properties
 
 import attr
 
@@ -68,13 +70,13 @@ class Subscribe:
         validator=attr.validators.instance_of(Task)
     )
 
-    async def configure(self):
+    async def configure(self) -> None:
         await self._configure_exchange()
         await self._configure_queue()
         await self._configure_queue_bind()
         await self._configure_dlx()
 
-    async def _configure_exchange(self):
+    async def _configure_exchange(self) -> None:
         await self.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
@@ -82,13 +84,13 @@ class Subscribe:
         )
         await asyncio.sleep(2)
 
-    async def _configure_queue(self):
+    async def _configure_queue(self) -> None:
         await self.channel.queue_declare(
             queue_name=self.queue.name,
             durable=self.queue.durable
         )
 
-    async def _configure_queue_bind(self):
+    async def _configure_queue_bind(self) -> None:
         await self.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
@@ -99,11 +101,11 @@ class Subscribe:
             queue_name=self.queue.name
         )
 
-    async def _configure_dlx(self):
+    async def _configure_dlx(self) -> None:
         self.dlx.channel = self.channel
         await self.dlx.configure()
 
-    async def callback(self, channel, body, envelope, properties):
+    async def callback(self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties):
         try:
             process_result = await self.task.execute(body)
             await self.ack_event(envelope)
@@ -113,13 +115,13 @@ class Subscribe:
             await self.dlx.send_event(cause, body, envelope, properties)
             await self.reject_event(envelope)
 
-    async def reject_event(self, envelope, requeue=False):
+    async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         await self.channel.basic_client_nack(
             delivery_tag=envelope.delivery_tag,
             requeue=requeue
         )
 
-    async def ack_event(self, envelope):
+    async def ack_event(self, envelope: Envelope) -> None:
         await self.channel.basic_client_ack(
             delivery_tag=envelope.delivery_tag
         )
