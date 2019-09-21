@@ -46,6 +46,12 @@ class DLX:
         await self._configure_queue_bind()
 
     async def _configure_exchange(self):
+        logging.debug(
+            "Configuring DLX exchange: ["
+            f"exchange_name: {self.dlx_exchange.name}] | "
+            f"type_name: {self.dlx_exchange.exchange_type}"
+            f" | durable: {self.dlx_exchange.durable}]"
+        )
         await self.channel.exchange_declare(
             exchange_name=self.dlx_exchange.name,
             type_name=self.dlx_exchange.exchange_type,
@@ -54,6 +60,12 @@ class DLX:
         asyncio.sleep(2)
 
     async def _configure_queue(self):
+        logging.debug(
+            "Configuring DLX queue: ["
+            f"queue_name: {self._ensure_endswith_dlq(self.dlq_queue.name)}"
+            f" | durable: {self.dlq_queue.durable} | "
+            f"arguments: {self.dlq_queue.arguments}]"
+        )
         await self.channel.queue_declare(
             queue_name=self._ensure_endswith_dlq(self.dlq_queue.name),
             durable=self.dlq_queue.durable,
@@ -61,19 +73,17 @@ class DLX:
         )
 
     async def _configure_queue_bind(self):
+        logging.debug(
+            "Configuring DLX queue bind: ["
+            f"exchange_name: {self.dlx_exchange.name}] | "
+            f"type_name: {self._ensure_endswith_dlq(self.dlq_queue.name)}"
+            f" | routing_key: {self.routing_key}]"
+        )
         await self.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=self._ensure_endswith_dlq(self.dlq_queue.name),
             routing_key=self.routing_key
         )
-
-    def _remove_invalid_queue_extension(self, value):
-        if value.rfind('.') > 0:
-            value = value.replace(
-                value[value.rfind('.'):],
-                ''
-            )
-        return value
 
     def _ensure_endswith_dlq(self, value):
         if not value.endswith('.dlq'):

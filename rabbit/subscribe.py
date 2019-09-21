@@ -8,6 +8,7 @@ import attr
 
 from rabbit.dlx import DLX
 from rabbit.exchange import Exchange
+from rabbit.job import SampleJob
 from rabbit.queue import Queue
 from rabbit.task import Task
 
@@ -61,7 +62,9 @@ class Subscribe:
     )
     task = attr.ib(
         type=Task,
-        default=Task(),
+        default=Task(
+            job=SampleJob.echo_job
+        ),
         validator=attr.validators.instance_of(Task)
     )
 
@@ -100,17 +103,12 @@ class Subscribe:
         self.dlx.channel = self.channel
         await self.dlx.configure()
 
-    # @staticmethod
-    # def p(data, **kwargs):
-    #     return dict(dado=data, kwargs=kwargs)
-
     async def callback(self, channel, body, envelope, properties):
         try:
-            # await self.task.execute(self.p, body, envelope=envelope)
-            self.task.job = self.p
-            process_result = await self.task.execute(body, envelope=envelope)
-            print(f'process result: {process_result}')
+            process_result = await self.task.execute(body)
             await self.ack_event(envelope)
+
+            return process_result
         except Exception as cause:
             await self.dlx.send_event(cause, body, envelope, properties)
             await self.reject_event(envelope)

@@ -9,6 +9,7 @@ import attr
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
+
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
@@ -45,6 +46,12 @@ class Publish:
         await self._configure_queue_bind()
 
     async def _configure_exchange(self):
+        logging.debug(
+            "Configuring Publish exchange: ["
+            f"exchange_name: {self.exchange.name}] | "
+            f"type_name: {self.exchange.exchange_type}"
+            f" | durable: {self.exchange.durable}]"
+        )
         await self.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
@@ -53,12 +60,23 @@ class Publish:
         await asyncio.sleep(2)
 
     async def _configure_queue(self):
+        logging.debug(
+            "Configuring Publish queue: ["
+            f"queue_name: {self.queue.name}] | "
+            f"durable: {self.queue.durable}]"
+        )
         await self.channel.queue_declare(
             queue_name=self.queue.name,
             durable=self.queue.durable
         )
 
     async def _configure_queue_bind(self):
+        logging.debug(
+            "Configuring Publish queue bind: ["
+            f"exchange_name: {self.exchange.name}] | "
+            f"queue_name: {self.queue.name}"
+            f" | routing_key: {self.exchange.topic}]"
+        )
         await self.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,

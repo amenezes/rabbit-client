@@ -1,9 +1,4 @@
-import logging
-
 import attr
-
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 @attr.s(slots=True, frozen=True)

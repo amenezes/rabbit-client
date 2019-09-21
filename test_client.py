@@ -1,32 +1,50 @@
 import asyncio
+import logging
 
 from aiohttp import web
 
 from rabbit.client import AioRabbitClient
+from rabbit.subscribe import Subscribe
+from rabbit.task import Task
+
+
+def custom_job(*args, **kwargs):
+    logging.info('Executing custom job.')
+    return 'Custom JOB.'
 
 
 async def handle_info(request):
-    return web.json_response({'app': 'aio-client'})
+    return web.json_response({'app': 'aio-rabbit-client'})
 
 
 async def handle_status(request):
     return web.json_response({'status': 'UP'})
 
 
-def configure(app):
-    client = AioRabbitClient(app.loop)
+def configure_custom_client(app):
+    client = AioRabbitClient(
+        app=app.loop,
+        subscribe=Subscribe(task=Task(job=custom_job))
+    )
     app.loop.run_until_complete(client.connect())
-    # app.loop.run_until_complete(client.configure())
+    app.loop.create_task(client.configure())
     app['rabbit_client'] = client
 
 
+def configure_default_client(app):
+    client = AioRabbitClient(app.loop)
+    app.loop.run_until_complete(client.connect())
+    app.loop.create_task(client.configure())
+    app['rabbit_client'] = client
+
+
+logging.getLogger().setLevel(logging.INFO)
 loop = asyncio.get_event_loop()
 app = web.Application(loop=loop)
 app.add_routes([
     web.get('/manage/health', handle_status),
     web.get('/manage/info', handle_info)
 ])
-configure(app)
-# app.loop.call_soon(app['rabbit_client'], configure(app))
-app.loop.run_until_complete(app['rabbit_client'].configure())
+# configure_default_client(app)
+configure_custom_client(app)
 web.run_app(app, host='0.0.0.0', port=5000)

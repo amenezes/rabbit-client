@@ -59,21 +59,22 @@ class AioRabbitClient:
     def protocol(self):
         return self._protocol
 
-    async def connect(self):
-        self._protocol = await self._get_protocol_connection()
+    async def connect(self, **kwargs):
+        self._protocol = await self._get_protocol_connection(**kwargs)
         self._channel = await self._protocol.channel()
         await self._configure_pub_sub()
 
-    async def _get_protocol_connection(self):
+    async def _get_protocol_connection(self, **kwargs):
         protocol = None
         try:
             *_, protocol = await aioamqp.connect(
                 host=self.host,
                 port=self.port,
-                on_error=self.on_error_callback
+                on_error=self.on_error_callback,
+                **kwargs
             )
         except aioamqp.AmqpClosedConnection:
-            logging.error('Connection lost with message broker.')
+            logging.error('Connection lost with message broker...')
         except OSError:
             await asyncio.sleep(10)
             await self.connect()
@@ -83,7 +84,10 @@ class AioRabbitClient:
     async def on_error_callback(self, exception):
         """Reconnect on RabbitMQ callback."""
         try:
-            logging.error("Error to connect with message broker, a new attempt will occur in 10 seconds.")
+            logging.error(
+                "Error to connect with message broker, "
+                "a new attempt will occur in 10 seconds."
+            )
             await asyncio.sleep(10)
             await self.connect()
             await self.configure()
@@ -97,10 +101,10 @@ class AioRabbitClient:
         self.subscribe.channel = self._channel
 
     async def configure(self):
-        logging.info('Configurando o message broker...')
+        logging.info('Configuring the message broker...')
         await self.configure_subscribe()
         await self.configure_publish()
-        logging.info('Successfully.')
+        logging.info('Message broker successfully configured.')
 
     async def configure_subscribe(self):
         await self.subscribe.configure()

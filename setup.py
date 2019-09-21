@@ -24,17 +24,18 @@ setuptools.setup(
         ('Issue tracker', 'https://github.com/amenezes/rabbit-client/issues')
     )),
     install_requires=[
-        'attrs>=19.1.0'
+        'attrs>=19.1.0',
+        'attrs>=0.13.0'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Framework :: AsyncIO",
-        "Framework :: Flask",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
-        "Topic :: Software Development :: Libraries :: Java Libraries",
+        "Topic :: Software Development :: Object Brokering",
+        "Topic :: System :: Distributed Computing",
     ],
 )

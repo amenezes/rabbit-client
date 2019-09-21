@@ -1,14 +1,18 @@
 import asyncio
+import logging
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 import attr
 
 
-@attr.s(slots=True)
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+
+@attr.s(slots=True, frozen=True)
 class Task:
 
-    app = attr.ib(default=asyncio.get_event_loop())
+    _app = attr.ib(default=asyncio.get_event_loop())
     job = attr.ib(
         default=None,
         validator=attr.validators.optional(
@@ -21,16 +25,19 @@ class Task:
         validator=attr.validators.instance_of(ProcessPoolExecutor)
     )
 
-    async def execute(self, data, **kwargs):
+    async def execute(self, *args, **kwargs):
         if not callable(self.job):
             raise TypeError('Job must be callable.')
 
+        logging.debug('Starting ProcessPoolExecutor...')
+        logging.debug(f'args received: {args}')
+        logging.debug(f'kwargs receveid: {kwargs}')
         task = [
-            self.app.run_in_executor(
+            self._app.run_in_executor(
                 self.process_executor,
                 partial(
                     self.job,
-                    data,
+                    *args,
                     **kwargs
                 )
             )
@@ -38,10 +45,3 @@ class Task:
         completed, *_ = await asyncio.wait(task)
         results = [t.result() for t in completed]
         return results
-
-    @staticmethod
-    def echo_job(*args, **kwargs):
-        return dict(
-            positional_arguments=args,
-            keyword_arguments=kwargs
-        )

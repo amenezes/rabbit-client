@@ -25,36 +25,33 @@ r = AioRabbitClient(
 )
 loop.run_until_complete(r.connect())
 loop.run_until_complete(r.configure_publish())
-print(f"[>] Event sent to exchange: [{os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange')}]")
+print(
+    "[>] Event sent to: "
+    f"[exchange: {os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange')}"
+    f" | topic: {os.getenv('SUBSCRIBE_TOPIC', '#')} | "
+    f"subscribe: {os.getenv('SUBSCRIBE_QUEUE', 'default.subscribe.queue')}]"
+)
 
 payload = {
-    'documento': 1,
-    'descricao': '123',
-    'pecaPesquisavel': None,
-    'paginas': [
+    'document': 1,
+    'description': '123',
+    'documentSearchable': None,
+    'pages': [
         {
-            'corpo': 'abc 123',
-            'numero': 1
+            'body': 'abc 123',
+            'number': 1
         },
         {
-            'corpo': 'def 456',
-            'numero': 2
+            'body': 'def 456',
+            'number': 2
         },
         {
-            'corpo': 'ghi 789',
-            'numero': 3
+            'body': 'ghi 789',
+            'number': 3
         }
     ]
 }
-# send result process event
-# loop.run_until_complete(
-#     r.publish.send_event(
-#         json.dumps(payload),
-#         properties={'headers': {'x-delay': 5000}}
-#     )
-# )
 
-# send result to subscribe
 loop.run_until_complete(
     r.publish.send_event(
         json.dumps(payload),
