@@ -47,9 +47,8 @@ SUBSCRIBE_QUEUE=default.subscribe.queue
 
 # dlx
 DLX_EXCHANGE=DLX
+DLX_TYPE=direct
 DQL_QUEUE=default.subscribe.queue.dlq
-SUBSCRIBE_EXCHANGE=default.in.exchange
-SUBSCRIBE_TOPIC=#
 ```
 
 ## Usage example

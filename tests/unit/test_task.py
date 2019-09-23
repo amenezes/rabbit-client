@@ -11,4 +11,4 @@ class TestTask(asynctest.TestCase):
     async def test_calling_invalid_job(self):
         custom_task = Task(job=None)
         with self.assertRaises(TypeError):
-            await custom_task.execute()
+            await custom_task.process_executor()

@@ -1,5 +1,5 @@
+import json
 import logging
-from typing import Any, Dict
 
 import attr
 
@@ -11,11 +11,18 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 class SampleJob:
 
     @staticmethod
-    def echo_job(*args, **kwargs) -> Dict[str, Any]:
+    def echo_job(*args, **kwargs) -> str:
         logging.info(
             'Using the standard callable to process subscribe events.'
         )
-        return dict(
-            positional_arguments=args,
+
+        pargs = None
+        if len(args) > 0:
+            pargs = json.loads(args[0])
+        else:
+            pargs = json.dumps(args)
+
+        return json.dumps(dict(
+            positional_arguments=pargs,
             keyword_arguments=kwargs
-        )
+        ))

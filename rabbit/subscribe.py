@@ -11,6 +11,7 @@ import attr
 from rabbit.dlx import DLX
 from rabbit.exchange import Exchange
 from rabbit.job import SampleJob
+from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.task import Task
 
@@ -69,6 +70,20 @@ class Subscribe:
         ),
         validator=attr.validators.instance_of(Task)
     )
+    task_type = attr.ib(
+        default='standard',
+        validator=attr.validators.and_(
+            attr.validators.in_(['standard', 'process']),
+            attr.validators.instance_of(str)
+        )
+    )
+    publish = attr.ib(
+        type=Publish,
+        default=None,
+        validator=attr.validators.optional(
+            validator=attr.validators.instance_of(Publish)
+        )
+    )
 
     async def configure(self) -> None:
         await self._configure_exchange()
@@ -105,12 +120,25 @@ class Subscribe:
         self.dlx.channel = self.channel
         await self.dlx.configure()
 
+    async def _execute(self, data):
+        process_result = []
+        if self.task_type == 'process':
+            process_result = await self.task.process_executor(data)
+        else:
+            process_result = await self.task.std_executor(data)
+        return process_result
+
     async def callback(self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties):
         try:
-            process_result = await self.task.execute(body)
+            process_result = await self._execute(body)
             await self.ack_event(envelope)
 
-            return process_result
+            if self.publish:
+                self.publish.channel = self.channel
+                for result in process_result:
+                    await self.publish.send_event(result)
+            else:
+                return process_result
         except Exception as cause:
             await self.dlx.send_event(cause, body, envelope, properties)
             await self.reject_event(envelope)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 from typing import Any, Tuple
 
 import aioamqp
@@ -75,28 +76,19 @@ class AioRabbitClient:
                 on_error=self.on_error_callback,
                 **kwargs
             )
-        except aioamqp.AmqpClosedConnection:
-            logging.error('Connection lost with message broker...')
         except OSError:
-            await asyncio.sleep(10)
+            logging.info(f'Trying connect on {self.host}:{self.port}')
+            await asyncio.sleep(30)
             await self.connect()
 
         return protocol
 
     async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
         """Reconnect on RabbitMQ callback."""
-        try:
-            logging.error(
-                "Error to connect with message broker, "
-                "a new attempt will occur in 10 seconds."
-            )
-            await asyncio.sleep(10)
-            await self.connect()
-            await self.configure()
-        except aioamqp.exceptions.SynchronizationError:
-            pass
-        except Exception:
-            pass
+        logging.info(f'Application will be restarted on 30 seconds.')
+        logging.error(f'Error: {exception}')
+        await asyncio.sleep(10)
+        sys.exit(1)
 
     async def _configure_pub_sub(self) -> None:
         self.publish.channel = self._channel

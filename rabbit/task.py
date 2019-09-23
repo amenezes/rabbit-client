@@ -19,13 +19,13 @@ class Task:
             validator=attr.validators.is_callable()
         )
     )
-    process_executor = attr.ib(
+    process = attr.ib(
         type=ProcessPoolExecutor,
         default=ProcessPoolExecutor(max_workers=1),
         validator=attr.validators.instance_of(ProcessPoolExecutor)
     )
 
-    async def execute(self, *args, **kwargs):
+    async def process_executor(self, *args, **kwargs):
         if not callable(self.job):
             raise TypeError('Job must be callable.')
 
@@ -34,7 +34,7 @@ class Task:
         logging.debug(f'kwargs receveid: {kwargs}')
         task = [
             self._app.run_in_executor(
-                self.process_executor,
+                self.process,
                 partial(
                     self.job,
                     *args,
@@ -45,3 +45,17 @@ class Task:
         completed, *_ = await asyncio.wait(task)
         results = [t.result() for t in completed]
         return results
+
+    async def std_executor(self, *args, **kwargs):
+        if not callable(self.job):
+            raise TypeError('Job must be callable.')
+
+        logging.debug('Starting StandardExecutor...')
+        logging.debug(f'args received: {args}')
+        logging.debug(f'kwargs receveid: {kwargs}')
+        if asyncio.iscoroutinefunction(self.job):
+            result = await self.job(*args, **kwargs)
+            return [result]
+        else:
+            result = self.job(*args, **kwargs)
+            return [result]

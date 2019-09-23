@@ -58,7 +58,7 @@ class DLX:
             type_name=self.dlx_exchange.exchange_type,
             durable=self.dlx_exchange.durable
         )
-        asyncio.sleep(2)
+        await asyncio.sleep(2)
 
     async def _configure_queue(self) -> None:
         logging.debug(

@@ -4,6 +4,7 @@ import logging
 from aiohttp import web
 
 from rabbit.client import AioRabbitClient
+from rabbit.publish import Publish
 from rabbit.subscribe import Subscribe
 from rabbit.task import Task
 
@@ -24,7 +25,10 @@ async def handle_status(request):
 def configure_custom_client(app):
     client = AioRabbitClient(
         app=app.loop,
-        subscribe=Subscribe(task=Task(job=custom_job))
+        subscribe=Subscribe(
+            task=Task(job=custom_job),
+            publish=Publish()
+        )
     )
     app.loop.run_until_complete(client.connect())
     app.loop.create_task(client.configure())
@@ -32,7 +36,13 @@ def configure_custom_client(app):
 
 
 def configure_default_client(app):
-    client = AioRabbitClient(app.loop)
+    # client = AioRabbitClient(app.loop) # console only output
+    client = AioRabbitClient(
+        app=app.loop,
+        subscribe=Subscribe(
+            publish=Publish()
+        )
+    )
     app.loop.run_until_complete(client.connect())
     app.loop.create_task(client.configure())
     app['rabbit_client'] = client
@@ -45,6 +55,6 @@ app.add_routes([
     web.get('/manage/health', handle_status),
     web.get('/manage/info', handle_info)
 ])
-# configure_default_client(app)
-configure_custom_client(app)
+configure_default_client(app)
+# configure_custom_client(app)
 web.run_app(app, host='0.0.0.0', port=5000)
