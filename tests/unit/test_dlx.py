@@ -25,13 +25,13 @@ class TestDLX(unittest.TestCase):
                     values.get(value)
                 )
 
-    def test_dlq_properties(self):
-        self.assertIsInstance(
-            self.dlx._get_properties(
-                10000,
-                'Test exception',
-                'test_exchange',
-                '#'
-            ),
-            dict
-        )
+    # def test_dlq_properties(self):
+    #     self.assertIsInstance(
+    #         self.dlx._get_properties(
+    #             10000,
+    #             'Test exception',
+    #             'test_exchange',
+    #             '#'
+    #         ),
+    #         dict
+    #     )

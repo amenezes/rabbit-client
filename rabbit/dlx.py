@@ -4,6 +4,7 @@ import os
 from typing import Dict
 
 from aioamqp.channel import Channel
+from aioamqp.envelope import Envelope
 
 import attr
 
@@ -91,38 +92,33 @@ class DLX:
             value = f'{value}.dlq'
         return value
 
-    def _get_properties(self,
-                        timeout: int,
-                        exception_message: str,
-                        original_exchange: str,
-                        original_routing_key: str) -> Dict:
+    async def send_event(self, cause, body, envelope, properties) -> None:
+        logging.error(f'Error to process event: {cause}')
+        timeout = await self._get_timeout(properties.headers)
+        properties = await self._get_properties(timeout, cause, envelope)
+        await self.channel.publish(
+            body,
+            self.dlx_exchange.name,
+            self.dlq_queue.name,
+            properties
+        )
+
+    async def _get_timeout(self, headers: Dict[str, int]) -> int:
+        if (headers) and ('x-delay' in headers):
+            delay = headers.get('x-delay') or 5000
+        return int(delay * 5)
+
+    async def _get_properties(self,
+                              timeout: int,
+                              exception_message: str,
+                              envelope: Envelope) -> Dict:
         properties = {
             'expiration': f'{timeout}',
             'headers': {
                 'x-delay': f'{timeout}',
                 'x-exception-message': f'{exception_message}',
-                'x-original-exchange': f'{original_exchange}',
-                'x-original-routingKey': f'{original_routing_key}'
+                'x-original-exchange': f'{envelope.exchange_name}',
+                'x-original-routingKey': f'{envelope.routing_key}'
             }
         }
         return properties
-
-    async def send_event(self, cause, body, envelope, properties) -> None:
-        logging.error(f'Error to process event: {cause}')
-        timeout = await self._get_timeout(properties.headers)
-        await self.channel.publish(
-            body,
-            self.dlx_exchange.name,
-            self.dlq_queue.name,
-            self._get_properties(
-                timeout,
-                cause,
-                envelope.exchange_name,
-                envelope.routing_key
-            )
-        )
-
-    async def _get_timeout(self, headers, delay: int = 5000) -> int:
-        if (headers is not None) and ('x-delay' in headers):
-            delay = headers['x-delay']
-        return int(delay) * 5

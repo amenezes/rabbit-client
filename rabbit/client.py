@@ -1,12 +1,10 @@
 import asyncio
 import logging
 import os
-import sys
 from typing import Any, Tuple
 
 import aioamqp
 from aioamqp.channel import Channel
-from aioamqp.protocol import AmqpProtocol
 
 import attr
 
@@ -53,24 +51,26 @@ class AioRabbitClient:
         default=None,
         init=False
     )
+    _transport = attr.ib(
+        default=None,
+        init=False
+    )
 
     @property
     def channel(self) -> Channel:
         return self._channel
 
     @property
-    def protocol(self):
+    def protocol(self) -> Channel:
         return self._protocol
 
-    async def connect(self, **kwargs) -> None:
-        self._protocol = await self._get_protocol_connection(**kwargs)
-        self._channel = await self._protocol.channel()
-        await self._configure_pub_sub()
+    @property
+    def transport(self):
+        return self._transport
 
-    async def _get_protocol_connection(self, **kwargs) -> AmqpProtocol:
-        protocol = None
+    async def connect(self, **kwargs) -> None:
         try:
-            *_, protocol = await aioamqp.connect(
+            self._transport, self._protocol = await aioamqp.connect(
                 host=self.host,
                 port=self.port,
                 on_error=self.on_error_callback,
@@ -80,15 +80,20 @@ class AioRabbitClient:
             logging.info(f'Trying connect on {self.host}:{self.port}')
             await asyncio.sleep(30)
             await self.connect()
+        except aioamqp.exceptions.AmqpClosedConnection:
+            logging.info(f'Trying connect on {self.host}:{self.port}')
+            await asyncio.sleep(30)
+            await self.connect()
 
-        return protocol
+        self._channel = await self._protocol.channel()
+        await self._configure_pub_sub()
 
     async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
         """Reconnect on RabbitMQ callback."""
-        logging.info(f'Application will be restarted on 30 seconds.')
-        logging.error(f'Error: {exception}')
-        await asyncio.sleep(10)
-        sys.exit(1)
+        if not hasattr(exception, 'code'):
+            await asyncio.sleep(10)
+            await self.connect()
+            await self.configure()
 
     async def _configure_pub_sub(self) -> None:
         self.publish.channel = self._channel
