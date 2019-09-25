@@ -20,3 +20,6 @@ class SampleJob:
             positional_arguments=json.dumps(args),
             keyword_arguments=kwargs
         ))
+
+    async def async_echo_job(self, *args, **kwargs):
+        return self.echo_job(*args, **kwargs)

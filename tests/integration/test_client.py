@@ -74,12 +74,3 @@ class TestClient(asynctest.TestCase):
             EnvelopeMock(),
             PropertiesMock(headers=None)
         )
-
-    async def test_process_executor(self):
-        pass
-
-    async def test_std_executor_job_coro(self):
-        pass
-
-    async def test_std_executor_job_std_fn(self):
-        pass
