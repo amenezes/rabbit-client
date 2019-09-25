@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := about
 RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
 VENV_DIR := $(shell [ ! -d "venv" ] && echo 1 || echo 0)
+CLEAN_TEST_ENV := "true"
 
 lint:
 	@echo "> executing flake8 to check codestyle..."
@@ -17,11 +18,15 @@ clean:
 tests:
 	@echo "> unittest"
 ifeq ($(RABBIT_INSTANCE), 0)
+	@echo "> initializing rabbit container..."
 	docker-compose -f example/docker-compose.yml up -d rabbit
 	sleep 15
 endif
-	@echo "> applying database migrations"
 	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
+ifeq ($(CLEAN_TEST_ENV), "true")
+	@echo "> cleaning test environment..."
+	make clean
+endif
 
 doc: 
 	@echo "> generate project documentation..."

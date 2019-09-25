@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from typing import Any
 
 from aioamqp.channel import Channel
 
@@ -84,7 +83,7 @@ class Publish:
             routing_key=self.exchange.topic
         )
 
-    async def send_event(self, payload: Any, **kwargs) -> None:
+    async def send_event(self, payload: bytes, **kwargs) -> None:
         await self.channel.publish(
             payload=payload,
             exchange_name=self.exchange.name,

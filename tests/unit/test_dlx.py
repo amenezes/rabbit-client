@@ -1,18 +1,18 @@
-import unittest
+import asynctest
 
 from rabbit.dlx import DLX
 from rabbit.queue import Queue
 
 
-class TestDLX(unittest.TestCase):
+class TestDLX(asynctest.TestCase):
 
-    def setUp(self):
+    async def setUp(self):
         self.dlx = DLX(
             Queue(name='queue'),
             routing_key='queue'
         )
 
-    def test_ensure_endswith_dlq(self):
+    async def test_ensure_endswith_dlq(self):
         values = {
             'queue': 'queue.dlq',
             'queue.dlq': 'queue.dlq',
@@ -21,17 +21,18 @@ class TestDLX(unittest.TestCase):
         for value in values.keys():
             with self.subTest(value=value):
                 self.assertEqual(
-                    self.dlx._ensure_endswith_dlq(value),
+                    await self.dlx._ensure_endswith_dlq(value),
                     values.get(value)
                 )
 
-    # def test_dlq_properties(self):
-    #     self.assertIsInstance(
-    #         self.dlx._get_properties(
-    #             10000,
-    #             'Test exception',
-    #             'test_exchange',
-    #             '#'
-    #         ),
-    #         dict
-    #     )
+    async def test_get_default_timeout(self):
+        result = await self.dlx._get_timeout(None)
+        self.assertEqual(result, 5000)
+
+    async def test_get_cycle_timeout(self):
+        values = {1: 5000, 2: 25000, 3: 125000}
+        for i in values.keys():
+            result = await self.dlx._get_timeout(
+                {'x-delay': values.get(i)}
+            )
+            self.assertEqual(result, int(values.get(i) * 5))

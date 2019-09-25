@@ -11,15 +11,16 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 class SampleJob:
 
     @staticmethod
-    def echo_job(*args, **kwargs) -> str:
+    def echo_job(data: bytes) -> bytes:
         logging.info(
             'Using the standard callable to process subscribe events.'
         )
 
-        return json.dumps(dict(
-            positional_arguments=json.dumps(args),
-            keyword_arguments=kwargs
-        ))
+        data_response = json.loads(data)
+        return bytes(
+            json.dumps(data_response),
+            'utf-8'
+        )
 
-    async def async_echo_job(self, *args, **kwargs):
-        return self.echo_job(*args, **kwargs)
+    async def async_echo_job(self, data: bytes) -> bytes:
+        return self.echo_job(data)

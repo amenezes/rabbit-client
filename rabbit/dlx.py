@@ -62,32 +62,35 @@ class DLX:
         await asyncio.sleep(2)
 
     async def _configure_queue(self) -> None:
+        queue_name = await self._ensure_endswith_dlq(self.dlq_queue.name)
         logging.debug(
             "Configuring DLX queue: ["
-            f"queue_name: {self._ensure_endswith_dlq(self.dlq_queue.name)}"
+            f"queue_name: {queue_name}"
             f" | durable: {self.dlq_queue.durable} | "
             f"arguments: {self.dlq_queue.arguments}]"
         )
         await self.channel.queue_declare(
-            queue_name=self._ensure_endswith_dlq(self.dlq_queue.name),
+            queue_name=queue_name,
             durable=self.dlq_queue.durable,
             arguments=self.dlq_queue.arguments
         )
 
     async def _configure_queue_bind(self) -> None:
+        queue_name = await self._ensure_endswith_dlq(self.dlq_queue.name)
         logging.debug(
             "Configuring DLX queue bind: ["
             f"exchange_name: {self.dlx_exchange.name}] | "
-            f"type_name: {self._ensure_endswith_dlq(self.dlq_queue.name)}"
+            f"type_name: {queue_name}"
             f" | routing_key: {self.routing_key}]"
         )
+
         await self.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
-            queue_name=self._ensure_endswith_dlq(self.dlq_queue.name),
+            queue_name=queue_name,
             routing_key=self.routing_key
         )
 
-    def _ensure_endswith_dlq(self, value: str) -> str:
+    async def _ensure_endswith_dlq(self, value: str) -> str:
         if not value.endswith('.dlq'):
             value = f'{value}.dlq'
         return value
@@ -104,7 +107,7 @@ class DLX:
         )
 
     async def _get_timeout(self, headers: Dict[str, int]) -> int:
-        delay = 5000
+        delay = 1000
         if (headers) and (headers.get('x-delay')):
             delay = headers.get('x-delay') or 5000
         return int(delay * 5)
