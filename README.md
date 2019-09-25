@@ -53,19 +53,34 @@ DQL_QUEUE=default.subscribe.queue.dlq
 
 ## Usage example
 
+### Consumer
+
 ```python
 import asyncio
 
 from rabbit.client import AioRabbitClient
-from rabbit.engine import AioRabbitEngine
 
 loop = asyncio.get_event_loop()
 
-engine = AioRabbitEngine()
-loop.run_until_complete(engine.connect())
+client = AioRabbitClient()
+loop.run_until_complete(client.connect())
+loop.run_until_complete(client.configure())
+# TODO
+```
 
-rclient = AioRabbitClient(channel=engine.channel)
-loop.run_until_complete(rclient.configure())
+### Producer
+
+```python
+import asyncio
+
+from rabbit.client import AioRabbitClient
+
+loop = asyncio.get_event_loop()
+
+client = AioRabbitClient()
+loop.run_until_complete(client.connect())
+loop.run_until_complete(client.configure())
+# TODO
 ```
 
 ## Development
@@ -73,12 +88,18 @@ loop.run_until_complete(rclient.configure())
 Install development dependencies.
 
 ```bash
-pip install -r requirements-dev.txt
+make install-deps
+```
+
+To execute lint:
+
+```bash
+make lint
 ```
 
 To execute tests just run:
 ```bash
-python -m pytest -v --cov-report term --cov=rabbit tests
+make tests
 ```
 
 ## Links

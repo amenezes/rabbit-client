@@ -16,13 +16,7 @@ class SampleJob:
             'Using the standard callable to process subscribe events.'
         )
 
-        pargs = None
-        if len(args) > 0:
-            pargs = json.loads(args[0])
-        else:
-            pargs = json.dumps(args)
-
         return json.dumps(dict(
-            positional_arguments=pargs,
+            positional_arguments=json.dumps(args),
             keyword_arguments=kwargs
         ))

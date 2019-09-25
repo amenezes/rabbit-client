@@ -104,7 +104,8 @@ class DLX:
         )
 
     async def _get_timeout(self, headers: Dict[str, int]) -> int:
-        if (headers) and ('x-delay' in headers):
+        delay = 5000
+        if (headers) and (headers.get('x-delay')):
             delay = headers.get('x-delay') or 5000
         return int(delay * 5)
 

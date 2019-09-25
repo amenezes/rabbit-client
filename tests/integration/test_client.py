@@ -25,8 +25,8 @@ class EnvelopeMock(Envelope):
 
 class PropertiesMock(Properties):
 
-    def __init__(self, value={'x-delay': 5000}):
-        self.headers = value
+    def __init__(self, headers={'x-delay': 5000}):
+        self.headers = headers
 
 
 class TestClient(asynctest.TestCase):
@@ -55,6 +55,10 @@ class TestClient(asynctest.TestCase):
         """The property only will change after configure()."""
         self.assertIsNotNone(self.client.protocol)
 
+    async def test_transport_property(self):
+        """The property only will change after configure()."""
+        self.assertIsNotNone(self.client.transport)
+
     async def test_dlx_send_event(self):
         await self.client.subscribe.dlx.send_event(
             Exception('test'),
@@ -63,11 +67,19 @@ class TestClient(asynctest.TestCase):
             PropertiesMock()
         )
 
-    # async def test_invalid_delay_on_dlx_send_event(self):
-    #     with self.assertRaises(TypeError):
-    #         await self.client.subscribe.dlx.send_event(
-    #             Exception('test'),
-    #             bytes(json.dumps(self.payload), 'utf-8'),
-    #             EnvelopeMock(),
-    #             PropertiesMock({'x-delay': None})
-    #         )
+    async def test_invalid_delay_on_dlx_send_event(self):
+        await self.client.subscribe.dlx.send_event(
+            Exception('test'),
+            bytes(json.dumps(self.payload), 'utf-8'),
+            EnvelopeMock(),
+            PropertiesMock(headers=None)
+        )
+
+    async def test_process_executor(self):
+        pass
+
+    async def test_std_executor_job_coro(self):
+        pass
+
+    async def test_std_executor_job_std_fn(self):
+        pass
