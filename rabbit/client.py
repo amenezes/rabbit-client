@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional
 
 import aioamqp
 from aioamqp.channel import Channel
@@ -49,7 +49,7 @@ class AioRabbitClient:
     )
 
     @property
-    def channel(self) -> Channel:
+    def channel(self) -> Optional[Channel]:
         return self._channel
 
     @property

@@ -95,8 +95,13 @@ class Subscribe:
             await self.client.connect()
         await self._configure_exchange()
         await self._configure_queue()
-        await self._configure_queue_bind()
         await self.dlx.configure()
+        await self._configure_publish()
+        await self._configure_queue_bind()
+
+    async def _configure_publish(self):
+        if self.publish:
+            await self.publish.configure()
 
     async def _configure_exchange(self) -> None:
         await self.client.channel.exchange_declare(

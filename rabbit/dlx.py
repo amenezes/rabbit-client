@@ -26,7 +26,7 @@ class DLX:
         type=str,
         validator=attr.validators.instance_of(str)
     )
-    client = attr.ib(
+    _client = attr.ib(
         type=Optional[AioRabbitClient],
         default=None,
         validator=attr.validators.optional(
@@ -42,8 +42,19 @@ class DLX:
         validator=attr.validators.instance_of(Exchange)
     )
 
+    @property
+    def client(self):
+        return self._client
+
+    @client.setter
+    def client(self, client):
+        if not isinstance(client, AioRabbitClient):
+            ValueError('client must be AioRabbitClient instance.')
+        self._client = client
+        self._client.instances.append(self)
+
     async def ensure_client_is_valid(self) -> None:
-        if not self.client:
+        if not self._client:
             raise ValueError('To configure DLX a valid client must be set.')
 
     async def configure(self) -> None:
@@ -59,7 +70,7 @@ class DLX:
             f"type_name: {self.dlx_exchange.exchange_type}"
             f" | durable: {self.dlx_exchange.durable}]"
         )
-        await self.client.channel.exchange_declare(
+        await self._client.channel.exchange_declare(
             exchange_name=self.dlx_exchange.name,
             type_name=self.dlx_exchange.exchange_type,
             durable=self.dlx_exchange.durable
@@ -76,7 +87,7 @@ class DLX:
             f" | durable: {self.dlq_queue.durable} | "
             f"arguments: {self.dlq_queue.arguments}]"
         )
-        await self.client.channel.queue_declare(
+        await self._client.channel.queue_declare(
             queue_name=queue_name,
             durable=self.dlq_queue.durable,
             arguments=self.dlq_queue.arguments
@@ -93,7 +104,7 @@ class DLX:
             f" | routing_key: {self.routing_key}]"
         )
 
-        await self.client.channel.queue_bind(
+        await self._client.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=queue_name,
             routing_key=self.routing_key
@@ -112,7 +123,7 @@ class DLX:
         queue_name = await self._ensure_endswith_dlq(
             self.dlq_queue.name
         )
-        await self.client.channel.publish(
+        await self._client.channel.publish(
             body,
             self.dlx_exchange.name,
             queue_name,

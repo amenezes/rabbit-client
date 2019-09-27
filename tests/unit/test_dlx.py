@@ -36,3 +36,14 @@ class TestDLX(asynctest.TestCase):
                 {'x-delay': values.get(i)}
             )
             self.assertEqual(result, int(values.get(i) * 5))
+
+    async def test_client_property(self):
+        self.assertIsNone(self.dlx.client)
+
+    # async def test_set_invalid_client_property(self):
+    #     with self.assertRaises(ValueError):
+    #         self.dlx.client(None)
+
+    # async def test_set_client_property(self):
+    #     with self.assertRaises(ValueError):
+    #         self.dlx.client = AioRabbitClient()

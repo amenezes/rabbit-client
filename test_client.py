@@ -36,7 +36,7 @@ def configure_custom_client(app):
 def configure_default_client(app):
     client = AioRabbitClient(app=app.loop)
     consumer = Subscribe(client, publish=Publish())
-    app.loop.run_until_complete(client.connect())
+    # app.loop.run_until_complete(client.connect())
     app.loop.create_task(consumer.configure())
     app['rabbit_client'] = client
 

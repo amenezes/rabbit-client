@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import Optional
 
 import attr
 
@@ -15,9 +16,12 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 @attr.s(slots=True)
 class Publish:
 
-    client = attr.ib(
-        type=AioRabbitClient,
-        validator=attr.validators.instance_of(AioRabbitClient)
+    _client = attr.ib(
+        type=Optional[AioRabbitClient],
+        default=None,
+        validator=attr.validators.optional(
+            validator=attr.validators.instance_of(AioRabbitClient)
+        )
     )
     exchange = attr.ib(
         type=Exchange,
@@ -36,8 +40,16 @@ class Publish:
         validator=attr.validators.instance_of(Queue)
     )
 
-    def __attrs_post_init__(self) -> None:
-        self.client.instances.append(self)
+    @property
+    def client(self):
+        return self._client
+
+    @client.setter
+    def client(self, client):
+        if not isinstance(client, AioRabbitClient):
+            ValueError('client must be AioRabbitClient instance.')
+        self._client = client
+        self._client.instances.append(self)
 
     async def configure(self) -> None:
         if not self.client.channel:
