@@ -2,10 +2,9 @@ import asyncio
 import logging
 import os
 
-from aioamqp.channel import Channel
-
 import attr
 
+from rabbit.client import AioRabbitClient
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
@@ -16,12 +15,9 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 @attr.s(slots=True)
 class Publish:
 
-    channel = attr.ib(
-        type=Channel,
-        default=None,
-        validator=attr.validators.optional(
-            validator=attr.validators.instance_of(Channel)
-        )
+    client = attr.ib(
+        type=AioRabbitClient,
+        validator=attr.validators.instance_of(AioRabbitClient)
     )
     exchange = attr.ib(
         type=Exchange,
@@ -40,7 +36,12 @@ class Publish:
         validator=attr.validators.instance_of(Queue)
     )
 
+    def __attrs_post_init__(self) -> None:
+        self.client.instances.append(self)
+
     async def configure(self) -> None:
+        if not self.client.channel:
+            await self.client.connect()
         await self._configure_exchange()
         await self._configure_queue()
         await self._configure_queue_bind()
@@ -52,7 +53,7 @@ class Publish:
             f"type_name: {self.exchange.exchange_type}"
             f" | durable: {self.exchange.durable}]"
         )
-        await self.channel.exchange_declare(
+        await self.client.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable
@@ -65,7 +66,7 @@ class Publish:
             f"queue_name: {self.queue.name}] | "
             f"durable: {self.queue.durable}]"
         )
-        await self.channel.queue_declare(
+        await self.client.channel.queue_declare(
             queue_name=self.queue.name,
             durable=self.queue.durable
         )
@@ -77,14 +78,14 @@ class Publish:
             f"queue_name: {self.queue.name}"
             f" | routing_key: {self.exchange.topic}]"
         )
-        await self.channel.queue_bind(
+        await self.client.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
             routing_key=self.exchange.topic
         )
 
     async def send_event(self, payload: bytes, **kwargs) -> None:
-        await self.channel.publish(
+        await self.client.channel.publish(
             payload=payload,
             exchange_name=self.exchange.name,
             routing_key=self.exchange.topic,

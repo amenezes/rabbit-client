@@ -23,28 +23,21 @@ async def handle_status(request):
 
 
 def configure_custom_client(app):
-    client = AioRabbitClient(
-        app=app.loop,
-        subscribe=Subscribe(
-            task=Task(job=custom_job),
-            publish=Publish()
-        )
+    client = AioRabbitClient(app=app.loop)
+    consumer = Subscribe(
+        client,
+        task=Task(job=custom_job),
+        publish=Publish()
     )
-    app.loop.run_until_complete(client.connect())
-    app.loop.create_task(client.configure())
+    app.loop.create_task(consumer.configure())
     app['rabbit_client'] = client
 
 
 def configure_default_client(app):
-    # client = AioRabbitClient(app.loop) # console only output
-    client = AioRabbitClient(
-        app=app.loop,
-        subscribe=Subscribe(
-            publish=Publish()
-        )
-    )
+    client = AioRabbitClient(app=app.loop)
+    consumer = Subscribe(client, publish=Publish())
     app.loop.run_until_complete(client.connect())
-    app.loop.create_task(client.configure())
+    app.loop.create_task(consumer.configure())
     app['rabbit_client'] = client
 
 

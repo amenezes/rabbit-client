@@ -1,13 +1,13 @@
 import asyncio
 import logging
 import os
-from typing import Dict
+from typing import Dict, Optional
 
-from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
 
 import attr
 
+from rabbit.client import AioRabbitClient
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
@@ -26,11 +26,11 @@ class DLX:
         type=str,
         validator=attr.validators.instance_of(str)
     )
-    channel = attr.ib(
-        type=Channel,
+    client = attr.ib(
+        type=Optional[AioRabbitClient],
         default=None,
         validator=attr.validators.optional(
-            validator=attr.validators.instance_of(Channel)
+            validator=attr.validators.instance_of(AioRabbitClient)
         )
     )
     dlx_exchange = attr.ib(
@@ -42,7 +42,12 @@ class DLX:
         validator=attr.validators.instance_of(Exchange)
     )
 
+    async def ensure_client_is_valid(self) -> None:
+        if not self.client:
+            raise ValueError('To configure DLX a valid client must be set.')
+
     async def configure(self) -> None:
+        await self.ensure_client_is_valid()
         await self._configure_exchange()
         await self._configure_queue()
         await self._configure_queue_bind()
@@ -54,7 +59,7 @@ class DLX:
             f"type_name: {self.dlx_exchange.exchange_type}"
             f" | durable: {self.dlx_exchange.durable}]"
         )
-        await self.channel.exchange_declare(
+        await self.client.channel.exchange_declare(
             exchange_name=self.dlx_exchange.name,
             type_name=self.dlx_exchange.exchange_type,
             durable=self.dlx_exchange.durable
@@ -62,21 +67,25 @@ class DLX:
         await asyncio.sleep(2)
 
     async def _configure_queue(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.dlq_queue.name)
+        queue_name = await self._ensure_endswith_dlq(
+            self.dlq_queue.name
+        )
         logging.debug(
             "Configuring DLX queue: ["
             f"queue_name: {queue_name}"
             f" | durable: {self.dlq_queue.durable} | "
             f"arguments: {self.dlq_queue.arguments}]"
         )
-        await self.channel.queue_declare(
+        await self.client.channel.queue_declare(
             queue_name=queue_name,
             durable=self.dlq_queue.durable,
             arguments=self.dlq_queue.arguments
         )
 
     async def _configure_queue_bind(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.dlq_queue.name)
+        queue_name = await self._ensure_endswith_dlq(
+            self.dlq_queue.name
+        )
         logging.debug(
             "Configuring DLX queue bind: ["
             f"exchange_name: {self.dlx_exchange.name}] | "
@@ -84,7 +93,7 @@ class DLX:
             f" | routing_key: {self.routing_key}]"
         )
 
-        await self.channel.queue_bind(
+        await self.client.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=queue_name,
             routing_key=self.routing_key
@@ -96,13 +105,17 @@ class DLX:
         return value
 
     async def send_event(self, cause, body, envelope, properties) -> None:
+        await self.ensure_client_is_valid()
         logging.error(f'Error to process event: {cause}')
         timeout = await self._get_timeout(properties.headers)
         properties = await self._get_properties(timeout, cause, envelope)
-        await self.channel.publish(
+        queue_name = await self._ensure_endswith_dlq(
+            self.dlq_queue.name
+        )
+        await self.client.channel.publish(
             body,
             self.dlx_exchange.name,
-            self.dlq_queue.name,
+            queue_name,
             properties
         )
 
