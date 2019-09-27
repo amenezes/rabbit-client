@@ -25,7 +25,7 @@ setuptools.setup(
     )),
     install_requires=[
         'attrs>=19.1.0',
-        'attrs>=0.13.0'
+        'aioamqp>=0.13.0'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",
