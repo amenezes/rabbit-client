@@ -4,8 +4,8 @@ import json
 import asynctest
 
 from rabbit.client import AioRabbitClient
-from rabbit.subscribe import Subscribe
 from rabbit.publish import Publish
+from rabbit.subscribe import Subscribe
 
 from tests.integration.setup import (
     EnvelopeMock,

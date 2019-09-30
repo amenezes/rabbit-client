@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import Any, Tuple, Optional
+from typing import Any, Optional, Tuple
 
 import aioamqp
 from aioamqp.channel import Channel
