@@ -5,6 +5,7 @@ import asynctest
 
 from rabbit.client import AioRabbitClient
 from rabbit.subscribe import Subscribe
+from rabbit.publish import Publish
 
 from tests.integration.setup import (
     EnvelopeMock,
@@ -23,8 +24,20 @@ class TestSubscribeIntegration(asynctest.TestCase):
             'utf-8'
         )
 
-    async def test_configure_subscribe(self):
+    async def test_configure_subscribe_without_publish(self):
         await self.subscribe.configure()
+
+    async def test_create_subscribe_with_publish(self):
+        subscribe = Subscribe(client=self.client, publish=Publish())
+        self.assertIsInstance(subscribe.publish, Publish)
+
+    async def test_subscribe_set_valid_publish(self):
+        self.subscribe.publish = Publish()
+        await self.subscribe.configure()
+
+    async def test_subscribe_set_invalid_publish(self):
+        with self.assertRaises(ValueError):
+            self.subscribe.publish = None
 
     async def test_client_connect_on_subscribe(self):
         subscribe = Subscribe(AioRabbitClient())

@@ -76,13 +76,24 @@ class Subscribe:
             attr.validators.instance_of(str)
         )
     )
-    publish = attr.ib(
+    _publish = attr.ib(
         type=Optional[Publish],
         default=None,
         validator=attr.validators.optional(
             validator=attr.validators.instance_of(Publish)
         )
     )
+
+    @property
+    def publish(self) -> Publish:
+        return self._publish
+
+    @publish.setter
+    def publish(self, publish) -> Optional[None]:
+        if not isinstance(publish, Publish):
+            raise ValueError('publish must be Publish instance.')
+        self._publish = publish
+        self._publish.client = self.client
 
     def __attrs_post_init__(self) -> None:
         self.client.instances.append(self)

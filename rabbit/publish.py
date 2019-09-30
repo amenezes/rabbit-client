@@ -47,7 +47,7 @@ class Publish:
     @client.setter
     def client(self, client):
         if not isinstance(client, AioRabbitClient):
-            ValueError('client must be AioRabbitClient instance.')
+            raise ValueError('client must be AioRabbitClient instance.')
         self._client = client
         self._client.instances.append(self)
 
