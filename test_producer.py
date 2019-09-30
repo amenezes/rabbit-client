@@ -51,7 +51,7 @@ payload = {
 
 loop.run_until_complete(
     publish.send_event(
-        bytes(json.dumps(payload), 'utf-8'),
-        properties={'headers': {'x-delay': 5000}}
+        bytes(json.dumps(payload), 'utf-8')
+        # properties={'headers': {'x-delay': 5000}}
     )
 )

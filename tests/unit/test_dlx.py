@@ -31,7 +31,7 @@ class TestDLX(asynctest.TestCase):
 
     async def test_get_default_timeout(self):
         result = await self.dlx._get_timeout(None)
-        self.assertEqual(result, 5000)
+        self.assertEqual(result, 25000)
 
     async def test_get_cycle_timeout(self):
         values = {1: 5000, 2: 25000, 3: 125000}

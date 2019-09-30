@@ -125,15 +125,17 @@ class DLX:
                          properties: Properties) -> None:
         logging.error(f'Error to process event: {cause}')
         timeout = await self._get_timeout(properties.headers)
+        logging.debug(f'timeout: {timeout}')
         properties = await self._get_properties(timeout, cause, envelope)
-        queue_name = await self._ensure_endswith_dlq(
-            self.dlq_queue.name
+        logging.debug(
+            f'send event to dlq: [exchange: {self.dlx_exchange.name}'
+            f' | queue: {self.dlq_queue.name} | properties: {properties}]'
         )
         try:
             await self._client.channel.publish(
                 body,
                 self.dlx_exchange.name,
-                queue_name,
+                self.dlq_queue.name,
                 properties
             )
         except AttributeError:
@@ -142,11 +144,10 @@ class DLX:
                 'has been called in the AioRabbitClient instance.'
             )
 
-    async def _get_timeout(self, headers: Dict[str, int]) -> int:
-        delay = 1000
-        if (headers) and (headers.get('x-delay')):
-            delay = headers.get('x-delay') or 5000
-        return int(delay * 5)
+    async def _get_timeout(self, headers, delay=5000):
+        if (headers is not None) and ('x-delay' in headers):
+            delay = headers['x-delay']
+        return int(delay) * 5
 
     async def _get_properties(self,
                               timeout: int,
