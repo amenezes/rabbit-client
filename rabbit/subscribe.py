@@ -11,6 +11,7 @@ import attr
 
 from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
+from rabbit.exceptions import AttributeNotInitialized
 from rabbit.exchange import Exchange
 from rabbit.job import SampleJob
 from rabbit.publish import Publish
@@ -85,11 +86,11 @@ class Subscribe:
     )
 
     @property
-    def publish(self) -> Publish:
+    def publish(self) -> Optional[Publish]:
         return self._publish
 
     @publish.setter
-    def publish(self, publish) -> Optional[None]:
+    def publish(self, publish: Publish) -> None:
         if not isinstance(publish, Publish):
             raise ValueError('publish must be Publish instance.')
         self._publish = publish
@@ -102,13 +103,16 @@ class Subscribe:
             self.publish.client = self.client
 
     async def configure(self) -> None:
-        if not self.client.channel:
+        try:
+            await self._configure_exchange()
+            await self._configure_queue()
+            await self.dlx.configure()
+            await self._configure_publish()
+            await self._configure_queue_bind()
+        except AttributeNotInitialized:
+            logging.warning('Client not initialized trying fallback...')
             await self.client.connect()
-        await self._configure_exchange()
-        await self._configure_queue()
-        await self.dlx.configure()
-        await self._configure_publish()
-        await self._configure_queue_bind()
+            await self.configure()
 
     async def _configure_publish(self):
         if self.publish:
@@ -147,7 +151,11 @@ class Subscribe:
             process_result = await self.task.std_executor(data)
         return process_result
 
-    async def callback(self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties):
+    async def callback(self,
+                       channel: Channel,
+                       body: bytes,
+                       envelope: Envelope,
+                       properties: Properties):
         try:
             process_result = await self._execute(body)
             await self.ack_event(envelope)

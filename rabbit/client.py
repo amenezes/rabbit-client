@@ -1,12 +1,15 @@
 import asyncio
 import logging
 import os
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, Dict, Tuple
 
 import aioamqp
 from aioamqp.channel import Channel
+from aioamqp.protocol import AmqpProtocol
 
 import attr
+
+from rabbit.exceptions import AttributeNotInitialized
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -49,18 +52,27 @@ class AioRabbitClient:
     )
 
     @property
-    def channel(self) -> Optional[Channel]:
+    def channel(self) -> Channel:
+        self._validate_property(self._channel)
         return self._channel
 
     @property
-    def protocol(self):
+    def protocol(self) -> AmqpProtocol:
+        self._validate_property(self._channel)
         return self._protocol
 
     @property
     def transport(self):
+        self._validate_property(self._channel)
         return self._transport
 
-    async def connect(self, **kwargs) -> None:
+    def _validate_property(self, prop: Callable) -> None:
+        if not prop:
+            raise AttributeNotInitialized(
+                'Do you need call connect() before.'
+            )
+
+    async def connect(self, **kwargs: Dict[str, str]) -> None:
         try:
             self._transport, self._protocol = await aioamqp.connect(
                 host=self.host,

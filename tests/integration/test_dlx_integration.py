@@ -3,6 +3,8 @@ import json
 
 import asynctest
 
+from rabbit.exceptions import OperationError
+
 from tests.integration.setup import (
     EnvelopeMock,
     PropertiesMock,
@@ -39,7 +41,7 @@ class TestDLXIntegration(asynctest.TestCase):
 
     async def test_invalid_client_on_dlx(self):
         dlx = await get_dlx(None)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(OperationError):
             await dlx.configure()
 
     async def test_configure_dlx(self):

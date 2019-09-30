@@ -6,6 +6,7 @@ from typing import Optional
 import attr
 
 from rabbit.client import AioRabbitClient
+from rabbit.exceptions import AttributeNotInitialized
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
@@ -45,18 +46,20 @@ class Publish:
         return self._client
 
     @client.setter
-    def client(self, client):
+    def client(self, client: AioRabbitClient) -> None:
         if not isinstance(client, AioRabbitClient):
             raise ValueError('client must be AioRabbitClient instance.')
         self._client = client
         self._client.instances.append(self)
 
     async def configure(self) -> None:
-        if not self.client.channel:
+        try:
+            await self._configure_exchange()
+            await self._configure_queue()
+            await self._configure_queue_bind()
+        except AttributeNotInitialized:
             await self.client.connect()
-        await self._configure_exchange()
-        await self._configure_queue()
-        await self._configure_queue_bind()
+            await self.configure()
 
     async def _configure_exchange(self) -> None:
         logging.debug(
