@@ -3,11 +3,13 @@ import logging
 import os
 from typing import Dict
 
-from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
+from aioamqp.properties import Properties
 
 import attr
 
+from rabbit.client import AioRabbitClient
+from rabbit.exceptions import OperationError
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
@@ -26,11 +28,11 @@ class DLX:
         type=str,
         validator=attr.validators.instance_of(str)
     )
-    channel = attr.ib(
-        type=Channel,
+    _client = attr.ib(
+        type=AioRabbitClient,
         default=None,
         validator=attr.validators.optional(
-            validator=attr.validators.instance_of(Channel)
+            validator=attr.validators.instance_of(AioRabbitClient)
         )
     )
     dlx_exchange = attr.ib(
@@ -42,10 +44,27 @@ class DLX:
         validator=attr.validators.instance_of(Exchange)
     )
 
+    @property
+    def client(self) -> AioRabbitClient:
+        return self._client
+
+    @client.setter
+    def client(self, client: AioRabbitClient) -> None:
+        if not isinstance(client, AioRabbitClient):
+            raise ValueError('client must be AioRabbitClient instance.')
+        self._client = client
+        self._client.instances.append(self)
+
     async def configure(self) -> None:
-        await self._configure_exchange()
-        await self._configure_queue()
-        await self._configure_queue_bind()
+        try:
+            await self._configure_exchange()
+            await self._configure_queue()
+            await self._configure_queue_bind()
+        except AttributeError:
+            raise OperationError(
+                'Ensure that connect() method '
+                'has been called in the AioRabbitClient instance.'
+            )
 
     async def _configure_exchange(self) -> None:
         logging.debug(
@@ -54,7 +73,7 @@ class DLX:
             f"type_name: {self.dlx_exchange.exchange_type}"
             f" | durable: {self.dlx_exchange.durable}]"
         )
-        await self.channel.exchange_declare(
+        await self._client.channel.exchange_declare(
             exchange_name=self.dlx_exchange.name,
             type_name=self.dlx_exchange.exchange_type,
             durable=self.dlx_exchange.durable
@@ -62,21 +81,25 @@ class DLX:
         await asyncio.sleep(2)
 
     async def _configure_queue(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.dlq_queue.name)
+        queue_name = await self._ensure_endswith_dlq(
+            self.dlq_queue.name
+        )
         logging.debug(
             "Configuring DLX queue: ["
             f"queue_name: {queue_name}"
             f" | durable: {self.dlq_queue.durable} | "
             f"arguments: {self.dlq_queue.arguments}]"
         )
-        await self.channel.queue_declare(
+        await self._client.channel.queue_declare(
             queue_name=queue_name,
             durable=self.dlq_queue.durable,
             arguments=self.dlq_queue.arguments
         )
 
     async def _configure_queue_bind(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.dlq_queue.name)
+        queue_name = await self._ensure_endswith_dlq(
+            self.dlq_queue.name
+        )
         logging.debug(
             "Configuring DLX queue bind: ["
             f"exchange_name: {self.dlx_exchange.name}] | "
@@ -84,7 +107,7 @@ class DLX:
             f" | routing_key: {self.routing_key}]"
         )
 
-        await self.channel.queue_bind(
+        await self._client.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=queue_name,
             routing_key=self.routing_key
@@ -95,26 +118,40 @@ class DLX:
             value = f'{value}.dlq'
         return value
 
-    async def send_event(self, cause, body, envelope, properties) -> None:
+    async def send_event(self,
+                         cause: Exception,
+                         body: bytes,
+                         envelope: Envelope,
+                         properties: Properties) -> None:
         logging.error(f'Error to process event: {cause}')
         timeout = await self._get_timeout(properties.headers)
+        logging.debug(f'timeout: {timeout}')
         properties = await self._get_properties(timeout, cause, envelope)
-        await self.channel.publish(
-            body,
-            self.dlx_exchange.name,
-            self.dlq_queue.name,
-            properties
+        logging.debug(
+            f'send event to dlq: [exchange: {self.dlx_exchange.name}'
+            f' | queue: {self.dlq_queue.name} | properties: {properties}]'
         )
+        try:
+            await self._client.channel.publish(
+                body,
+                self.dlx_exchange.name,
+                self.dlq_queue.name,
+                properties
+            )
+        except AttributeError:
+            raise OperationError(
+                'Ensure that connect() method '
+                'has been called in the AioRabbitClient instance.'
+            )
 
-    async def _get_timeout(self, headers: Dict[str, int]) -> int:
-        delay = 1000
-        if (headers) and (headers.get('x-delay')):
-            delay = headers.get('x-delay') or 5000
-        return int(delay * 5)
+    async def _get_timeout(self, headers, delay=5000):
+        if (headers is not None) and ('x-delay' in headers):
+            delay = headers['x-delay']
+        return int(delay) * 5
 
     async def _get_properties(self,
                               timeout: int,
-                              exception_message: str,
+                              exception_message: Exception,
                               envelope: Envelope) -> Dict:
         properties = {
             'expiration': f'{timeout}',

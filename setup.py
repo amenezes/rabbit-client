@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="rabbit-client",
-    version="0.1.0-alpha-2",
+    version="0.1.0",
     author="alexandre menezes",
     author_email="alexandre.fmenezes@gmail.com",
     description="rabbit message queue client",
@@ -25,7 +25,7 @@ setuptools.setup(
     )),
     install_requires=[
         'attrs>=19.1.0',
-        'attrs>=0.13.0'
+        'aioamqp>=0.13.0'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",

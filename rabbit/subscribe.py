@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import List, Optional
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
@@ -8,7 +9,9 @@ from aioamqp.properties import Properties
 
 import attr
 
+from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
+from rabbit.exceptions import AttributeNotInitialized
 from rabbit.exchange import Exchange
 from rabbit.job import SampleJob
 from rabbit.publish import Publish
@@ -22,12 +25,9 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 @attr.s(slots=True)
 class Subscribe:
 
-    channel = attr.ib(
-        type=Channel,
-        default=None,
-        validator=attr.validators.optional(
-            validator=attr.validators.instance_of(Channel)
-        )
+    client = attr.ib(
+        type=AioRabbitClient,
+        validator=attr.validators.instance_of(AioRabbitClient)
     )
     exchange = attr.ib(
         type=Exchange,
@@ -77,22 +77,49 @@ class Subscribe:
             attr.validators.instance_of(str)
         )
     )
-    publish = attr.ib(
-        type=Publish,
+    _publish = attr.ib(
+        type=Optional[Publish],
         default=None,
         validator=attr.validators.optional(
             validator=attr.validators.instance_of(Publish)
         )
     )
 
+    @property
+    def publish(self) -> Optional[Publish]:
+        return self._publish
+
+    @publish.setter
+    def publish(self, publish: Publish) -> None:
+        if not isinstance(publish, Publish):
+            raise ValueError('publish must be Publish instance.')
+        self._publish = publish
+        self._publish.client = self.client
+
+    def __attrs_post_init__(self) -> None:
+        self.client.instances.append(self)
+        self.dlx.client = self.client
+        if self.publish:
+            self.publish.client = self.client
+
     async def configure(self) -> None:
-        await self._configure_exchange()
-        await self._configure_queue()
-        await self._configure_queue_bind()
-        await self._configure_dlx()
+        try:
+            await self._configure_exchange()
+            await self._configure_queue()
+            await self.dlx.configure()
+            await self._configure_publish()
+            await self._configure_queue_bind()
+        except AttributeNotInitialized:
+            logging.warning('Client not initialized trying fallback...')
+            await self.client.connect()
+            await self.configure()
+
+    async def _configure_publish(self):
+        if self.publish:
+            await self.publish.configure()
 
     async def _configure_exchange(self) -> None:
-        await self.channel.exchange_declare(
+        await self.client.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable
@@ -100,41 +127,40 @@ class Subscribe:
         await asyncio.sleep(2)
 
     async def _configure_queue(self) -> None:
-        await self.channel.queue_declare(
+        await self.client.channel.queue_declare(
             queue_name=self.queue.name,
             durable=self.queue.durable
         )
 
     async def _configure_queue_bind(self) -> None:
-        await self.channel.queue_bind(
+        await self.client.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
             routing_key=self.exchange.topic
         )
-        await self.channel.basic_consume(
+        await self.client.channel.basic_consume(
             callback=self.callback,
             queue_name=self.queue.name
         )
 
-    async def _configure_dlx(self) -> None:
-        self.dlx.channel = self.channel
-        await self.dlx.configure()
-
-    async def _execute(self, data):
-        process_result = []
+    async def _execute(self, data: bytes) -> List[bytes]:
+        process_result = [bytes()]
         if self.task_type == 'process':
             process_result = await self.task.process_executor(data)
         else:
             process_result = await self.task.std_executor(data)
         return process_result
 
-    async def callback(self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties):
+    async def callback(self,
+                       channel: Channel,
+                       body: bytes,
+                       envelope: Envelope,
+                       properties: Properties):
         try:
             process_result = await self._execute(body)
             await self.ack_event(envelope)
 
             if self.publish:
-                self.publish.channel = self.channel
                 for result in process_result:
                     await self.publish.send_event(result)
             else:
@@ -144,12 +170,12 @@ class Subscribe:
             await self.reject_event(envelope)
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
-        await self.channel.basic_client_nack(
+        await self.client.channel.basic_client_nack(
             delivery_tag=envelope.delivery_tag,
             requeue=requeue
         )
 
     async def ack_event(self, envelope: Envelope) -> None:
-        await self.channel.basic_client_ack(
+        await self.client.channel.basic_client_ack(
             delivery_tag=envelope.delivery_tag
         )

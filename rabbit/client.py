@@ -1,15 +1,15 @@
 import asyncio
 import logging
 import os
-from typing import Any, Tuple
+from typing import Any, Callable, Dict, Tuple
 
 import aioamqp
 from aioamqp.channel import Channel
+from aioamqp.protocol import AmqpProtocol
 
 import attr
 
-from rabbit.publish import Publish
-from rabbit.subscribe import Subscribe
+from rabbit.exceptions import AttributeNotInitialized
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -18,7 +18,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 @attr.s(slots=True)
 class AioRabbitClient:
 
-    _app = attr.ib(default=asyncio.get_event_loop())
+    app = attr.ib(default=asyncio.get_event_loop())
     host = attr.ib(
         type=str,
         default=os.getenv('BROKER_HOST', 'localhost'),
@@ -28,16 +28,6 @@ class AioRabbitClient:
         type=int,
         default=int(os.getenv('BROKER_PORT', 5672)),
         validator=attr.validators.instance_of(int)
-    )
-    publish = attr.ib(
-        type=Publish,
-        default=Publish(),
-        validator=attr.validators.instance_of(Publish)
-    )
-    subscribe = attr.ib(
-        type=Subscribe,
-        default=Subscribe(),
-        validator=attr.validators.instance_of(Subscribe)
     )
     _channel = attr.ib(
         type=Channel,
@@ -55,20 +45,34 @@ class AioRabbitClient:
         default=None,
         init=False
     )
+    instances = attr.ib(
+        type=list,
+        default=[],
+        validator=attr.validators.instance_of(list)
+    )
 
     @property
     def channel(self) -> Channel:
+        self._validate_property(self._channel)
         return self._channel
 
     @property
-    def protocol(self) -> Channel:
+    def protocol(self) -> AmqpProtocol:
+        self._validate_property(self._channel)
         return self._protocol
 
     @property
     def transport(self):
+        self._validate_property(self._channel)
         return self._transport
 
-    async def connect(self, **kwargs) -> None:
+    def _validate_property(self, prop: Callable) -> None:
+        if not prop:
+            raise AttributeNotInitialized(
+                'Do you need call connect() before.'
+            )
+
+    async def connect(self, **kwargs: Dict[str, str]) -> None:
         try:
             self._transport, self._protocol = await aioamqp.connect(
                 host=self.host,
@@ -86,28 +90,11 @@ class AioRabbitClient:
             await self.connect()
 
         self._channel = await self._protocol.channel()
-        await self._configure_pub_sub()
 
     async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
         """Reconnect on RabbitMQ callback."""
         if not hasattr(exception, 'code'):
             await asyncio.sleep(10)
             await self.connect()
-            await self.configure()
-
-    async def _configure_pub_sub(self) -> None:
-        self.publish.channel = self._channel
-        self.subscribe.channel = self._channel
-
-    async def configure(self) -> None:
-        """Alias to configure subscribe and configure publish."""
-        logging.info('Configuring the message broker...')
-        await self.configure_subscribe()
-        await self.configure_publish()
-        logging.info('Message broker successfully configured.')
-
-    async def configure_subscribe(self) -> None:
-        await self.subscribe.configure()
-
-    async def configure_publish(self) -> None:
-        await self.publish.configure()
+            for instance in self.instances:
+                await instance.configure()
