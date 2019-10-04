@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+import attr
+
 from rabbit.tlog.core import singleton
 from rabbit.tlog.db import DB
 from rabbit.tlog.event import Event
@@ -12,6 +14,7 @@ from sqlalchemy.sql import text
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
+@attr.s(slots=True)
 class EventPersist:
 
     def save(self, data: bytes) -> None:

@@ -29,7 +29,7 @@ class SampleJob:
 
     @staticmethod
     @persist_event
-    def echo_persist_job(self, data: bytes) -> bytes:
+    def echo_persist_job(data: bytes) -> bytes:
         logging.info(
             'Using the persistent callable to process subscribe events.'
             ' This stream is compatible with the '
