@@ -1,9 +1,10 @@
 import os
+from typing import Any
 
 import attr
 
-from sqlalchemy.sql.elements import TextClause
 from sqlalchemy import create_engine
+from sqlalchemy.sql.elements import TextClause
 
 
 @attr.s(slots=True)
@@ -18,11 +19,11 @@ class DB:
     _engine = attr.ib(default=None)
     _connection = attr.ib(default=None)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         self._engine = create_engine(self.driver)
         self._connection = self._engine.connect()
 
-    def execute(self, stmt, **kwargs):
+    def execute(self, stmt, **kwargs) -> Any:
         if not isinstance(stmt, TextClause):
             raise TypeError(
                 'stmt is not instance of sqlalchemy.sql.elements.TextClause'

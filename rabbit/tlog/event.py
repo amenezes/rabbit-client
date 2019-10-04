@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 import attr
 
@@ -13,11 +14,14 @@ class Event:
     body = attr.ib(
         type=bytes
     )
+    created = attr.ib(
+        type=Optional[datetime],
+        default=None,
+        validator=attr.validators.optional(
+            validator=attr.validators.instance_of(datetime)
+        )
+    )
     status = attr.ib(
         type=bool,
         default=False
-    )
-    created = attr.ib(
-        type=datetime,
-        default=datetime.utcnow()
     )
