@@ -11,6 +11,7 @@ from rabbit.tlog.event import Event
 from rabbit.tlog.queries import EventQueries
 
 from sqlalchemy.sql import text
+from sqlalchemy.engine.result import RowProxy
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -36,6 +37,7 @@ class PollingPublisher:
             await asyncio.sleep(5)
 
     async def run(self):
+        self.db.configure()
         while True:
             await asyncio.sleep(os.getenv('POLLING_STANDBY_TIME', 60))
             event = await self._retrieve_event()
@@ -69,7 +71,7 @@ class PollingPublisher:
         return event
 
     async def _assemble_event(self, data) -> Event:
-        if not isinstance(data, tuple):
+        if not isinstance(data, RowProxy):
             raise TypeError('data must be tuple.')
         event = Event(
             body=bytes(data[1]),
