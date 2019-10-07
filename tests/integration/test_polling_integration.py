@@ -23,6 +23,7 @@ class TestPollingPublish(asynctest.TestCase):
             Publish(client=AioRabbitClient())
         )
 
+    @asynctest.skip
     async def test_assemble_event(self):
         payload = await self.format_payload(1, self.body, False)
         await self.polling._assemble_event(payload)

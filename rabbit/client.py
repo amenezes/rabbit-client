@@ -51,6 +51,7 @@ class AioRabbitClient:
         validator=attr.validators.instance_of(list)
     )
     _auto_configure = attr.ib(repr=False, default=False)
+    _channels = attr.ib(repr=False, default={})
 
     @property
     def channel(self) -> Channel:
@@ -83,18 +84,52 @@ class AioRabbitClient:
             )
         except OSError:
             logging.info(f'Trying connect on {self.host}:{self.port}')
-            await asyncio.sleep(10)
-            await self.connect()
+            await self._reconnect()
         except aioamqp.exceptions.AmqpClosedConnection:
             logging.info(f'Trying connect on {self.host}:{self.port}')
-            await asyncio.sleep(10)
-            await self.connect()
+            await self._reconnect()
 
         await self._configure_channel()
 
+    async def _reconnect(self):
+        await asyncio.sleep(30)
+        self._channel = None
+        await self.connect()
+
+    async def _reconnect2(self):
+        await asyncio.sleep(30)
+        for channel_inst in self._channels.keys():
+            self._channels.update({id(channel_inst): None})
+        await self.connect()
+
+    async def _configure_channel2(self):
+        if len(self._channels) == 0:
+            channel = await self._protocol.channel()
+            self._channels.update({id(channel): channel})
+        elif:
+            for channel_inst in self._channels.keys():
+                if not self._channels.get(channel_inst):
+                    channel = await self._protocol.channel()
+                    self._channels.update({channel_inst: channel})
+
+        for channel_inst in self._channels.keys():
+            for i in range(1 + 1, self._channels.get(channel_inst).channel_id + 1):
+                await self._channels.get(channel_inst).close()
+
+        for channel_inst in self._channels.keys():
+            if not self._channels.get(channel_inst).is_open:
+                await self._channels.get(channel_inst).open()
+
+        for channel_inst in self._channels.keys():
+            if (self._auto_configure) and (self._channels.get(channel_inst).channel_id == 1):
+                self._auto_configure = False
+                for instance in self.instances:
+                    await instance.configure()
+                    await asyncio.sleep(5)
+
     async def _configure_channel(self):
-        self._channel = await self._protocol.channel()
-        await asyncio.sleep(5)
+        if not self._channel:
+            self._channel = await self._protocol.channel()
 
         for i in range(1 + 1, self._channel.channel_id + 1):
             await self._channel.close()
@@ -111,6 +146,5 @@ class AioRabbitClient:
     async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
         """Reconnect on RabbitMQ callback."""
         if not hasattr(exception, 'code'):
-            await asyncio.sleep(10)
             self._auto_configure = True
-            await self.connect()
+            await self._reconnect()
