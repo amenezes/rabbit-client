@@ -27,7 +27,11 @@ class DB:
     _engine = attr.ib(default=None)
     _connection = attr.ib(default=None)
 
-    def __attrs_post_init__(self) -> None:
+    # def __attrs_post_init__(self) -> None:
+    #     self._engine = create_engine(self.driver)
+    #     self._connection = self._engine.connect()
+
+    def configure(self) -> None:
         self._engine = create_engine(self.driver)
         self._connection = self._engine.connect()
 

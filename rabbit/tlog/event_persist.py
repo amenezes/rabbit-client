@@ -20,12 +20,14 @@ class EventPersist:
     def save(self, data: bytes) -> None:
         self._is_valid(data)
         db = self._get_db_connection()
+        db.configure()
         stmt = text(EventQueries.INSERT_EVENT.value)
-        event = Event(body=data, created=datetime.utcnow())
+        event = Event(body=data, created_at=datetime.utcnow())
         stmt = stmt.bindparams(
             body=event.body,
             status=event.status,
-            created=event.created
+            created_at=event.created_at,
+            created_by=event.created_by
         )
         logging.debug(f'Saving event: [{event}]')
         db.execute(stmt)

@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := about
 RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
+POSTGRES_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep postgres | wc -l)
 VENV_DIR := $(shell [ ! -d "venv" ] && echo 1 || echo 0)
 CLEAN_TEST_ENV := "true"
 
@@ -21,6 +22,12 @@ ifeq ($(RABBIT_INSTANCE), 0)
 	@echo "> initializing rabbit container..."
 	docker-compose -f example/docker-compose.yml up -d rabbit
 	sleep 15
+endif
+ifeq ($(POSTGRES_INSTANCE), 0)
+	@echo "> initializing postgres container..."
+	docker-compose -f example/docker-compose.yml up -d postgres
+	sleep 10
+	alembic -c example/migrations/alembic.ini upgrade head
 endif
 	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
 ifeq ($(CLEAN_TEST_ENV), "true")

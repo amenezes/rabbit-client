@@ -30,6 +30,7 @@ class PollingPublisher:
     )
 
     async def configure(self) -> None:
+        self.db.configure()
         if not self.publish.client:
             await self.publish.configure()
             await asyncio.sleep(5)
@@ -68,6 +69,8 @@ class PollingPublisher:
         return event
 
     async def _assemble_event(self, data) -> Event:
+        if not isinstance(data, tuple):
+            raise TypeError('data must be tuple.')
         event = Event(
             body=bytes(data[1]),
             status=data[2]
