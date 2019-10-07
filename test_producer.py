@@ -32,20 +32,10 @@ print(
 payload = {
     'document': 1,
     'description': '123',
-    'documentSearchable': None,
     'pages': [
-        {
-            'body': 'abc 123',
-            'number': 1
-        },
-        {
-            'body': 'def 456',
-            'number': 2
-        },
-        {
-            'body': 'ghi 789',
-            'number': 3
-        }
+        {'body': 'abc 123'},
+        {'body': 'def 456'},
+        {'body': 'ghi 789'}
     ]
 }
 

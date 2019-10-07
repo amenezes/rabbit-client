@@ -1,7 +1,6 @@
 [run]
 branch = True
 omit = **__init__.py**
-       rabbit/tlog/migrations
 
 [report]
 show_missing = True

@@ -96,5 +96,6 @@ class AioRabbitClient:
         if not hasattr(exception, 'code'):
             await asyncio.sleep(10)
             await self.connect()
-            for instance in self.instances:
-                await instance.configure()
+            # for instance in self.instances:
+            #     await instance.configure()
+            #     await asyncio.sleep(5)

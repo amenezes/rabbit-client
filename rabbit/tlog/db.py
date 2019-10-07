@@ -1,10 +1,18 @@
+import logging
 import os
 from typing import Any
 
 import attr
 
-from sqlalchemy import create_engine
-from sqlalchemy.sql.elements import TextClause
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+
+try:
+    from sqlalchemy import create_engine
+    from sqlalchemy.sql.elements import TextClause
+except ModuleNotFoundError:
+    logging.error('To use the Polling-Publisher feature Install SQLAlchemy')
 
 
 @attr.s(slots=True)

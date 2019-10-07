@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from typing import Optional
 
 import attr
@@ -33,12 +34,15 @@ class PollingPublisher:
             await self.publish.configure()
             await asyncio.sleep(5)
 
-    async def run(self) -> None:
-        event = await self._retrieve_event()
-        if not event:
-            logging.debug('There are no new events...')
-        else:
-            await self._send_and_update(event)
+    async def run(self):
+        while True:
+            await asyncio.sleep(os.getenv('POLLING_STANDBY_TIME', 60))
+            event = await self._retrieve_event()
+            logging.debug(f'Event id:{event.identity} successfully processed.')
+            if not event:
+                logging.debug('There are no new events to be processed...')
+            else:
+                await self._send_and_update(event)
 
     async def _send_and_update(self, event: Event) -> None:
         try:
@@ -49,7 +53,7 @@ class PollingPublisher:
                 f' [event_id: {event.identity}]'
             )
         except Exception:
-            asyncio.sleep(10)
+            await asyncio.sleep(10)
             logging.error(
                 f"Failed to publish event id: {event.identity}"
             )

@@ -4,8 +4,10 @@ import logging
 from aiohttp import web
 
 from rabbit.client import AioRabbitClient
-from rabbit.publish import Publish
+# from rabbit.publish import Publish
 from rabbit.subscribe import Subscribe
+from rabbit.task import Task
+from rabbit.tlog import echo_persist_job
 
 
 async def handle_info(request):
@@ -18,7 +20,11 @@ async def handle_status(request):
 
 def configure_default_client(app):
     client = AioRabbitClient(app=app.loop)
-    consumer = Subscribe(client, publish=Publish())
+    # consumer = Subscribe(client, publish=Publish())
+    consumer = Subscribe(
+        client,
+        task=Task(job=echo_persist_job)
+    )
     app.loop.create_task(consumer.configure())
     app['rabbit_client'] = client
 
