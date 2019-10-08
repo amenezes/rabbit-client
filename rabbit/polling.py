@@ -10,7 +10,7 @@ from rabbit.tlog.db import DB
 from rabbit.tlog.event import Event
 from rabbit.tlog.queries import EventQueries
 
-from sqlalchemy.engine.result import RowProxy
+from sqlalchemy.engine.result import ResultProxy, RowProxy
 from sqlalchemy.sql import text
 
 
@@ -70,12 +70,15 @@ class PollingPublisher:
         if result:
             result = result.first()
             logging.debug(f"Successfully recovered event: {result}")
-            event = await self._assemble_event(result)
+            try:
+                event = await self._assemble_event(result)
+            except TypeError:
+                pass
         return event
 
     async def _assemble_event(self, data) -> Event:
         if not isinstance(data, RowProxy):
-            raise TypeError('data must be tuple.')
+            raise TypeError('data must be Rowproxy instance.')
         event = Event(
             body=bytes(data[1]),
             status=data[2]

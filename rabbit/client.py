@@ -45,7 +45,7 @@ class AioRabbitClient:
         init=False,
         validator=attr.validators.instance_of(list)
     )
-    _auto_configure = attr.ib(repr=False, default=False)
+    _auto_configure = attr.ib(repr=False, default=True)
     _channels = attr.ib(
         type=dict,
         default={},
@@ -106,14 +106,19 @@ class AioRabbitClient:
             logging.info(f'Trying connect on {self.host}:{self.port}')
             await self._reconnect()
 
-        self._channels.update({self.identity: {self.protocol_id: None}})
-        await self._configure_channel()
+        logging.debug(self.identity)
+        if self.identity not in self._channels.keys():
+            self._channels.update({self.identity: {self.protocol_id: None}})
+        # self._channels.update({self.identity: {self.protocol_id: None}})
+            await self._configure_channel()
 
     async def _configure_channel(self):
         for instance_id in self._channels.keys():
             for protocol_id, channel in self._channels.get(instance_id).items():
                 try:
-                    channel = await self._protocol.channel()
+                    if not channel:
+                        channel = await self._protocol.channel()
+                    # self._channels.update({instance_id: {protocol_id: channel}})
                     await channel.close()
                     if not channel.is_open:
                         await channel.open()
@@ -134,6 +139,7 @@ class AioRabbitClient:
 
     async def _reconnect(self):
         await asyncio.sleep(30)
+        self._channels.update({self.identity: {self.protocol_id: None}})
         await self.connect()
 
     async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
