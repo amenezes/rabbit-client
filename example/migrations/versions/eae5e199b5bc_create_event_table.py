@@ -21,9 +21,17 @@ depends_on = None
 def upgrade():
     op.create_table(
         'event',
-        sa.Column('id', sa.Integer, primary_key=True, unique=True, autoincrement=True),
+        sa.Column('id',
+            sa.Integer,
+            primary_key=True,
+            unique=True,
+            autoincrement=True
+        ),
         sa.Column('body', sa.Binary, nullable=False),
-        sa.Column('created_at', sa.DateTime, default=datetime.utcnow),
+        sa.Column('created_at',
+            sa.DateTime,
+            default=datetime.utcnow
+        ),
         sa.Column('created_by', sa.String(100)),
         sa.Column('status', sa.Boolean)
     )

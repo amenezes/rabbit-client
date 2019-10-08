@@ -26,3 +26,8 @@ class TestClientIntegration(asynctest.TestCase):
     async def test_transport_property(self):
         """The property only will change after configure()."""
         self.assertIsNotNone(self.client.transport)
+    
+    async def test_instances_property(self):
+        self.client.instances = self
+        self.client.instances = self
+        self.assertEqual(len(self.client.instances), 1)

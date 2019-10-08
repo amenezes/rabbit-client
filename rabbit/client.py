@@ -5,9 +5,9 @@ from typing import Any, Callable, Dict, Tuple
 
 import aioamqp
 from aioamqp.channel import Channel
-from aioamqp.protocol import AmqpProtocol
-from aioamqp.exceptions import ChannelClosed
 from aioamqp.exceptions import AmqpClosedConnection
+from aioamqp.exceptions import ChannelClosed
+from aioamqp.protocol import AmqpProtocol
 
 import attr
 
@@ -67,9 +67,9 @@ class AioRabbitClient:
 
     @property
     def channel(self) -> Channel:
-        ch = self._channels.get(self.identity, {}).get(self.protocol_id)
-        self._validate_property(ch)
-        return ch
+        _channel = self._channels.get(self.identity, {}).get(self.protocol_id)
+        self._validate_property(_channel)
+        return _channel
 
     @property
     def protocol(self) -> AmqpProtocol:
@@ -117,7 +117,9 @@ class AioRabbitClient:
                     await channel.close()
                     if not channel.is_open:
                         await channel.open()
-                        self._channels.update({instance_id: {protocol_id: channel}})
+                        self._channels.update(
+                            {instance_id: {protocol_id: channel}}
+                        )
                 except ChannelClosed:
                     pass
                 except AmqpClosedConnection:

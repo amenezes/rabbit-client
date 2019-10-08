@@ -1,7 +1,7 @@
 import logging
 import os
-from typing import Any
 import time
+from typing import Any
 
 import attr
 
@@ -44,12 +44,10 @@ class DB:
                 'stmt is not instance of sqlalchemy.sql.elements.TextClause'
             )
         result = None
-        logging.debug(stmt)
         try:
             result = self._connection.execute(stmt, kwargs)
         except OperationalError:
             self.configure()
-            logging.debug(stmt)
             self.execute(stmt)
 
         return result

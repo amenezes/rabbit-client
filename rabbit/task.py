@@ -56,6 +56,6 @@ class Task:
         if asyncio.iscoroutinefunction(self.job):
             result = await self.job(*args, **kwargs)
             return [result]
-        else:
-            result = self.job(*args, **kwargs)
-            return [result]
+        # else:
+        result = self.job(*args, **kwargs)
+        return [result]

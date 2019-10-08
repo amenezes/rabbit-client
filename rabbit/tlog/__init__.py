@@ -17,7 +17,6 @@ def persist_event(function):
         e.save(process_result)
         logging.debug(f'Saving event: [{process_result}]')
         return process_result
-    
     return save
 
 

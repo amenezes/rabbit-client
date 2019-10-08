@@ -24,6 +24,7 @@ class TestSubscribeIntegration(asynctest.TestCase):
             'utf-8'
         )
 
+    @asynctest.skip
     async def test_configure_subscribe_without_publish(self):
         await self.subscribe.configure()
 
@@ -31,6 +32,7 @@ class TestSubscribeIntegration(asynctest.TestCase):
         subscribe = Subscribe(client=self.client, publish=Publish())
         self.assertIsInstance(subscribe.publish, Publish)
 
+    @asynctest.skip
     async def test_subscribe_set_valid_publish(self):
         self.subscribe.publish = Publish()
         await self.subscribe.configure()
@@ -39,12 +41,15 @@ class TestSubscribeIntegration(asynctest.TestCase):
         with self.assertRaises(ValueError):
             self.subscribe.publish = None
 
+    @asynctest.skip
     async def test_client_connect_on_subscribe(self):
         subscribe = Subscribe(AioRabbitClient())
         await subscribe.configure()
 
+    @asynctest.skip
     async def test_reject_event(self):
         await self.subscribe.reject_event(EnvelopeMock())
 
+    @asynctest.skip
     async def test_ack_event(self):
         await self.subscribe.ack_event(EnvelopeMock())

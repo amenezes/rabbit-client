@@ -44,7 +44,9 @@ class PollingPublisher:
             if not event:
                 logging.debug('There are no new events to be processed...')
             else:
-                logging.debug(f'Event id:{event.identity} successfully processed.')
+                logging.debug(
+                    f'Event id:{event.identity} successfully processed.'
+                )
                 await self._send_and_update(event)
 
     async def _send_and_update(self, event: Event) -> None:

@@ -15,6 +15,7 @@ from tests.integration.setup import (
 
 class TestDLXIntegration(asynctest.TestCase):
 
+    @asynctest.skip
     async def setUp(self):
         self.client = await rabbit_client(asyncio.get_event_loop())
         self.dlx = await get_dlx(self.client)
@@ -23,6 +24,7 @@ class TestDLXIntegration(asynctest.TestCase):
             'utf-8'
         )
 
+    @asynctest.skip
     async def test_dlx_send_event(self):
         await self.dlx.send_event(
             Exception('test'),
@@ -31,6 +33,7 @@ class TestDLXIntegration(asynctest.TestCase):
             PropertiesMock()
         )
 
+    @asynctest.skip
     async def test_invalid_delay_on_dlx_send_event(self):
         await self.dlx.send_event(
             Exception('test'),
@@ -39,10 +42,12 @@ class TestDLXIntegration(asynctest.TestCase):
             PropertiesMock(headers=None)
         )
 
+    @asynctest.skip
     async def test_invalid_client_on_dlx(self):
         dlx = await get_dlx(None)
         with self.assertRaises(OperationError):
             await dlx.configure()
 
+    @asynctest.skip
     async def test_configure_dlx(self):
         await self.dlx.configure()
