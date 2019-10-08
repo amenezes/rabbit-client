@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Any
+import time
 
 import attr
 
@@ -11,6 +12,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 try:
     from sqlalchemy import create_engine
     from sqlalchemy.sql.elements import TextClause
+    from sqlalchemy.exc import OperationalError
 except ModuleNotFoundError:
     logging.error('To use the Polling-Publisher feature Install SQLAlchemy')
 
@@ -27,17 +29,27 @@ class DB:
     _engine = attr.ib(default=None)
     _connection = attr.ib(default=None)
 
-    # def __attrs_post_init__(self) -> None:
-    #     self._engine = create_engine(self.driver)
-    #     self._connection = self._engine.connect()
-
     def configure(self) -> None:
         self._engine = create_engine(self.driver)
-        self._connection = self._engine.connect()
+        try:
+            self._connection = self._engine.connect()
+        except Exception:
+            logging.error(f'Failed to connect to database: {self.driver}')
+            time.sleep(10)
+            self.configure()
 
     def execute(self, stmt, **kwargs) -> Any:
         if not isinstance(stmt, TextClause):
             raise TypeError(
                 'stmt is not instance of sqlalchemy.sql.elements.TextClause'
             )
-        return self._connection.execute(stmt, kwargs)
+        result = None
+        logging.debug(stmt)
+        try:
+            result = self._connection.execute(stmt, kwargs)
+        except OperationalError:
+            self.configure()
+            logging.debug(stmt)
+            self.execute(stmt)
+
+        return result

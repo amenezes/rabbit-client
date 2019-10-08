@@ -20,7 +20,8 @@ class TestPublishIntegration(asynctest.TestCase):
         )
 
     async def test_publish_event(self):
-        await self.publish.send_event(self.payload)
+        self.assertEqual(len(self.publish.client.instances), 3)
+        # await self.publish.send_event(self.payload)
 
     async def test_configure_publish(self):
         await self.publish.configure()

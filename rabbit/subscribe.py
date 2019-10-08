@@ -85,6 +85,12 @@ class Subscribe:
         )
     )
 
+    def __attrs_post_init__(self) -> None:
+        self.client.instances.append(self)
+        self.dlx.client = self.client
+        if self.publish:
+            self.publish.client = self.client
+
     @property
     def publish(self) -> Optional[Publish]:
         return self._publish
@@ -95,12 +101,6 @@ class Subscribe:
             raise ValueError('publish must be Publish instance.')
         self._publish = publish
         self._publish.client = self.client
-
-    def __attrs_post_init__(self) -> None:
-        self.client.instances.append(self)
-        self.dlx.client = self.client
-        if self.publish:
-            self.publish.client = self.client
 
     async def configure(self) -> None:
         try:

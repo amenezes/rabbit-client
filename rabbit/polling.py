@@ -10,8 +10,8 @@ from rabbit.tlog.db import DB
 from rabbit.tlog.event import Event
 from rabbit.tlog.queries import EventQueries
 
-from sqlalchemy.sql import text
 from sqlalchemy.engine.result import RowProxy
+from sqlalchemy.sql import text
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -41,10 +41,10 @@ class PollingPublisher:
         while True:
             await asyncio.sleep(os.getenv('POLLING_STANDBY_TIME', 60))
             event = await self._retrieve_event()
-            logging.debug(f'Event id:{event.identity} successfully processed.')
             if not event:
                 logging.debug('There are no new events to be processed...')
             else:
+                logging.debug(f'Event id:{event.identity} successfully processed.')
                 await self._send_and_update(event)
 
     async def _send_and_update(self, event: Event) -> None:
@@ -63,9 +63,10 @@ class PollingPublisher:
 
     async def _retrieve_event(self) -> Optional[Event]:
         stmt = text(EventQueries.OLDEST_EVENT.value)
-        result = self.db.execute(stmt).first()
+        result = self.db.execute(stmt)
         event = None
         if result:
+            result = result.first()
             logging.debug(f"Successfully recovered event: {result}")
             event = await self._assemble_event(result)
         return event

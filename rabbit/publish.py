@@ -41,6 +41,10 @@ class Publish:
         validator=attr.validators.instance_of(Queue)
     )
 
+    def __attrs_post_init__(self) -> None:
+        if self._client:
+            self.client.instances.append(self)
+
     @property
     def client(self):
         return self._client
