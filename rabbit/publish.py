@@ -63,7 +63,6 @@ class Publish:
             await self._configure_queue_bind()
         except AttributeNotInitialized:
             await self.client.connect()
-            await self.configure()
 
     async def _configure_exchange(self) -> None:
         logging.debug(

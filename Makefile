@@ -27,8 +27,8 @@ ifeq ($(POSTGRES_INSTANCE), 0)
 	@echo "> initializing postgres container..."
 	docker-compose -f example/docker-compose.yml up -d postgres
 	sleep 10
-	alembic -c example/migrations/alembic.ini upgrade head
 endif
+	alembic -c example/migrations/alembic.ini upgrade head
 	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
 ifeq ($(CLEAN_TEST_ENV), "true")
 	@echo "> cleaning test environment..."

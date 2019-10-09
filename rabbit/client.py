@@ -92,33 +92,32 @@ class AioRabbitClient:
             )
 
     async def connect(self, **kwargs: Dict[str, str]) -> None:
-        try:
-            self._transport, self._protocol = await aioamqp.connect(
-                host=self.host,
-                port=self.port,
-                on_error=self.on_error_callback,
-                **kwargs
-            )
-        except OSError:
-            logging.info(f'Trying connect on {self.host}:{self.port}')
-            await self._reconnect()
-        except aioamqp.exceptions.AmqpClosedConnection:
-            logging.info(f'Trying connect on {self.host}:{self.port}')
-            await self._reconnect()
-
         logging.debug(self.identity)
         if self.identity not in self._channels.keys():
+            try:
+                self._transport, self._protocol = await aioamqp.connect(
+                    host=self.host,
+                    port=self.port,
+                    on_error=self.on_error_callback,
+                    **kwargs
+                )
+            except OSError:
+                logging.info(f'Trying connect on {self.host}:{self.port}')
+                await self._reconnect()
+            except aioamqp.exceptions.AmqpClosedConnection:
+                logging.info(f'Trying connect on {self.host}:{self.port}')
+                await self._reconnect()
             self._channels.update({self.identity: {self.protocol_id: None}})
-        # self._channels.update({self.identity: {self.protocol_id: None}})
             await self._configure_channel()
+            await asyncio.sleep(5)
 
     async def _configure_channel(self):
         for instance_id in self._channels.keys():
             for protocol_id, channel in self._channels.get(instance_id).items():
+                logging.debug(f"CHANNEL: {channel}")
                 try:
                     if not channel:
                         channel = await self._protocol.channel()
-                    # self._channels.update({instance_id: {protocol_id: channel}})
                     await channel.close()
                     if not channel.is_open:
                         await channel.open()
@@ -139,7 +138,7 @@ class AioRabbitClient:
 
     async def _reconnect(self):
         await asyncio.sleep(30)
-        self._channels.update({self.identity: {self.protocol_id: None}})
+        self._channels = {}
         await self.connect()
 
     async def on_error_callback(self, exception: Tuple[Any, Any]) -> None:
