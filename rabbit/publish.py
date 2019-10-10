@@ -41,9 +41,9 @@ class Publish:
         validator=attr.validators.instance_of(Queue)
     )
 
-    def __attrs_post_init__(self) -> None:
-        if self._client:
-            self.client.instances.append(self)
+    def __attrs_post_init__(self):
+        if self.client:
+            self._client.instances.append(self)
 
     @property
     def client(self):
@@ -63,7 +63,9 @@ class Publish:
             await self._configure_queue_bind()
         except AttributeNotInitialized:
             logging.warning('Client not initialized trying fallback... PUBLISH')
-            await self.client.connect()
+            await self.client.persistent_connect()
+            await asyncio.sleep(5)
+            await self.configure()
 
     async def _configure_exchange(self) -> None:
         logging.debug(

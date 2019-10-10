@@ -10,7 +10,7 @@ from rabbit.tlog.db import DB
 from rabbit.tlog.event import Event
 from rabbit.tlog.queries import EventQueries
 
-from sqlalchemy.engine.result import ResultProxy, RowProxy
+from sqlalchemy.engine.result import RowProxy
 from sqlalchemy.sql import text
 
 
@@ -30,6 +30,9 @@ class PollingPublisher:
         validator=attr.validators.instance_of(DB)
     )
 
+    # def __attrs_post_init__(self):
+    #     if not self.publish.client.instances
+
     async def configure(self) -> None:
         self.db.configure()
         if not self.publish.client:
@@ -38,6 +41,7 @@ class PollingPublisher:
 
     async def run(self):
         self.db.configure()
+        logging.info("Starting polling-publisher")
         while True:
             await asyncio.sleep(os.getenv('POLLING_STANDBY_TIME', 60))
             event = await self._retrieve_event()

@@ -24,7 +24,6 @@ async def handle_status(request):
 
 
 def configure_default_client(app):
-    # consumer = Subscribe(client, publish=Publish())
     consumer = Subscribe(
         AioRabbitClient(app=app.loop),
         task=Task(job=echo_persist_job)
@@ -34,7 +33,6 @@ def configure_default_client(app):
     # polling-publisher
     app.loop.run_until_complete(asyncio.sleep(2))
     publish = Publish(
-        # AioRabbitClient(loop),
         AioRabbitClient(app=app.loop),
         exchange=Exchange(
             name=os.getenv('PUBLISH_EXCHANGE', 'default.out.exchange'),
@@ -49,10 +47,8 @@ def configure_default_client(app):
         publish=publish,
         db=DB(driver='postgresql://postgres:postgres@postgres:5432/db')
     )
-    app.loop.run_until_complete(publish.configure())
+    # app.loop.run_until_complete(publish.configure())
     app.loop.create_task(polling.run())
-
-    # app['rabbit_client'] = client
 
 
 logging.getLogger().setLevel(logging.DEBUG)

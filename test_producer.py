@@ -10,8 +10,11 @@ from rabbit.queue import Queue
 
 loop = asyncio.get_event_loop()
 
+client = AioRabbitClient(loop)
+loop.run_until_complete(client.connect())
+
 publish = Publish(
-    AioRabbitClient(loop),
+    client,
     exchange=Exchange(
         name=os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange'),
         exchange_type=os.getenv('SUBSCRIBE_EXCHANGE_TYPE', 'topic'),

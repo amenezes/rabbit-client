@@ -2,7 +2,7 @@
 RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
 POSTGRES_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep postgres | wc -l)
 VENV_DIR := $(shell [ ! -d "venv" ] && echo 1 || echo 0)
-CLEAN_TEST_ENV := "true"
+CLEAN_TEST_ENV := "false"
 
 lint:
 	@echo "> executing flake8 to check codestyle..."

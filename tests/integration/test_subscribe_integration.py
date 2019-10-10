@@ -16,7 +16,7 @@ from tests.integration.setup import (
 
 class TestSubscribeIntegration(asynctest.TestCase):
 
-    @asynctest.skip
+    # @asynctest.skip
     async def setUp(self):
         self.client = await rabbit_client(asyncio.get_event_loop())
         self.subscribe = await get_subscribe(self.client)
@@ -25,16 +25,16 @@ class TestSubscribeIntegration(asynctest.TestCase):
             'utf-8'
         )
 
-    @asynctest.skip
+    # @asynctest.skip
     async def test_configure_subscribe_without_publish(self):
         await self.subscribe.configure()
 
-    @asynctest.skip
+    # @asynctest.skip
     async def test_create_subscribe_with_publish(self):
         subscribe = Subscribe(client=self.client, publish=Publish())
         self.assertIsInstance(subscribe.publish, Publish)
 
-    @asynctest.skip
+    # @asynctest.skip
     async def test_subscribe_set_valid_publish(self):
         self.subscribe.publish = Publish()
         await self.subscribe.configure()
@@ -53,6 +53,6 @@ class TestSubscribeIntegration(asynctest.TestCase):
     async def test_reject_event(self):
         await self.subscribe.reject_event(EnvelopeMock())
 
-    @asynctest.skip
+    # @asynctest.skip
     async def test_ack_event(self):
         await self.subscribe.ack_event(EnvelopeMock())
