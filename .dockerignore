@@ -1,0 +1,5 @@
+dist
+*.egg-info
+site
+tests
+venv

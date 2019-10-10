@@ -56,15 +56,16 @@ class DLX:
         self._client.instances.append(self)
 
     async def configure(self) -> None:
-        try:
-            await self._configure_exchange()
-            await self._configure_queue()
-            await self._configure_queue_bind()
-        except AttributeError:
-            raise OperationError(
-                'Ensure that connect() method '
-                'has been called in the AioRabbitClient instance.'
-            )
+        pass
+        # try:
+        #     await self._configure_exchange()
+        #     await self._configure_queue()
+        #     await self._configure_queue_bind()
+        # except AttributeError:
+        #     raise OperationError(
+        #         'Ensure that connect() method '
+        #         'has been called in the AioRabbitClient instance.'
+        #     )
 
     async def _configure_exchange(self) -> None:
         logging.debug(

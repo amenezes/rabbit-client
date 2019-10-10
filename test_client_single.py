@@ -12,6 +12,7 @@ from rabbit.exchange import Exchange
 from rabbit.subscribe import Subscribe
 from rabbit.task import Task
 from rabbit.tlog import echo_persist_job
+from rabbit.tlog.db import DB
 
 
 async def handle_info(request):
@@ -23,18 +24,18 @@ async def handle_status(request):
 
 
 def configure_default_client(app):
-    client = AioRabbitClient(app=app.loop)
     # consumer = Subscribe(client, publish=Publish())
     consumer = Subscribe(
-        client,
+        AioRabbitClient(app=app.loop),
         task=Task(job=echo_persist_job)
     )
     app.loop.create_task(consumer.configure())
 
     # polling-publisher
-    app.loop.run_until_complete(asyncio.sleep(10))
+    app.loop.run_until_complete(asyncio.sleep(2))
     publish = Publish(
-        AioRabbitClient(loop),
+        # AioRabbitClient(loop),
+        AioRabbitClient(app=app.loop),
         exchange=Exchange(
             name=os.getenv('PUBLISH_EXCHANGE', 'default.out.exchange'),
             exchange_type=os.getenv('PUBLISH_EXCHANGE_TYPE', 'topic'),
@@ -44,11 +45,14 @@ def configure_default_client(app):
             name=os.getenv('PUBLISH_QUEUE', 'default.publish.queue')
         )
     )
-    polling = PollingPublisher(publish)
+    polling = PollingPublisher(
+        publish=publish,
+        db=DB(driver='postgresql://postgres:postgres@postgres:5432/db')
+    )
     app.loop.run_until_complete(publish.configure())
     app.loop.create_task(polling.run())
 
-    app['rabbit_client'] = client
+    # app['rabbit_client'] = client
 
 
 logging.getLogger().setLevel(logging.DEBUG)

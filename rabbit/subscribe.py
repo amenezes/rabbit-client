@@ -110,7 +110,7 @@ class Subscribe:
             await self._configure_publish()
             await self._configure_queue_bind()
         except AttributeNotInitialized:
-            logging.warning('Client not initialized trying fallback...')
+            logging.warning('Client not initialized trying fallback...SUBSCRIBE')
             await self.client.connect()
 
     async def _configure_publish(self):

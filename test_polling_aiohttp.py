@@ -40,7 +40,7 @@ print(
 )
 app = web.Application(loop=loop)
 configure_polling_publisher(app, polling, publish)
-web.run_app(app, host='0.0.0.0', port=5001)
+web.run_app(app, host='0.0.0.0', port=5002)
 # app.loop.run_until_complete(publish.configure())
 # app.loop.run_until_complete(polling.run())
 # while True:

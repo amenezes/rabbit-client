@@ -62,6 +62,7 @@ class Publish:
             await self._configure_queue()
             await self._configure_queue_bind()
         except AttributeNotInitialized:
+            logging.warning('Client not initialized trying fallback... PUBLISH')
             await self.client.connect()
 
     async def _configure_exchange(self) -> None:
