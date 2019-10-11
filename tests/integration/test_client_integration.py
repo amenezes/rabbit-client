@@ -23,13 +23,7 @@ class TestClientIntegration(asynctest.TestCase):
         """The property only will change after configure()."""
         self.assertIsNotNone(self.client.protocol)
 
-    @asynctest.skip
+    # @asynctest.skip
     async def test_transport_property(self):
         """The property only will change after configure()."""
         self.assertIsNotNone(self.client.transport)
-
-    @asynctest.skip
-    async def test_instances_property(self):
-        self.client.instances = self
-        self.client.instances = self
-        self.assertEqual(len(self.client.instances), 1)

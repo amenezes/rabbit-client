@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
+from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 
 import attr
@@ -86,7 +87,7 @@ class Subscribe:
     )
 
     def __attrs_post_init__(self) -> None:
-        self.client.instances.append(self)
+        self.client.monitor_connection(self)
         self.dlx.client = self.client
         if self.publish:
             self.publish.client = self.client
@@ -99,10 +100,12 @@ class Subscribe:
     def publish(self, publish: Publish) -> None:
         if not isinstance(publish, Publish):
             raise ValueError('publish must be Publish instance.')
+        logging.info('Registering connection monitoring')
         self._publish = publish
         self._publish.client = self.client
 
     async def configure(self) -> None:
+        await asyncio.sleep(5)
         try:
             await self._configure_exchange()
             await self._configure_queue()
@@ -110,12 +113,11 @@ class Subscribe:
             await self._configure_publish()
             await self._configure_queue_bind()
         except AttributeNotInitialized:
-            logging.warning('Client not initialized trying fallback...SUBSCRIBE')
-            await self.client.persistent_connect()
-            await asyncio.sleep(5)
-            await self.configure()
+            logging.debug('Waiting client initialization...SUBSCRIBE')
+        except SynchronizationError:
+            pass
 
-    async def _configure_publish(self):
+    async def _configure_publish(self) -> None:
         if self.publish:
             await self.publish.configure()
 
@@ -125,7 +127,7 @@ class Subscribe:
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(5)
 
     async def _configure_queue(self) -> None:
         await self.client.channel.queue_declare(

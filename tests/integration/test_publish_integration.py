@@ -19,10 +19,8 @@ class TestPublishIntegration(asynctest.TestCase):
             'utf-8'
         )
 
-    @asynctest.skip
     async def test_publish_event(self):
-        self.assertEqual(len(self.publish.client.instances), 3)
-        # await self.publish.send_event(self.payload)
+        await self.publish.send_event(self.payload)
 
     async def test_configure_publish(self):
         await self.publish.configure()

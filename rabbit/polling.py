@@ -30,9 +30,6 @@ class PollingPublisher:
         validator=attr.validators.instance_of(DB)
     )
 
-    # def __attrs_post_init__(self):
-    #     if not self.publish.client.instances
-
     async def configure(self) -> None:
         self.db.configure()
         if not self.publish.client:

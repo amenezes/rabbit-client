@@ -8,6 +8,7 @@ from aioamqp.channel import Channel
 
 import attr
 
+from rabbit.config import ConfigObserver
 from rabbit.exceptions import AttributeNotInitialized
 
 
@@ -28,14 +29,10 @@ class AioRabbitClient:
         default=int(os.getenv('BROKER_PORT', 5672)),
         validator=attr.validators.instance_of(int)
     )
+    _observer = attr.ib(type=ConfigObserver, default=ConfigObserver(), init=False)
     _channel = attr.ib(init=False, default=None)
     _protocol = attr.ib(init=False, default=None)
     _transport = attr.ib(init=False, default=None)
-    instances = attr.ib(
-        type=list,
-        default=[],
-        validator=attr.validators.instance_of(list)
-    )
 
     @property
     def channel(self) -> Channel:
@@ -46,19 +43,28 @@ class AioRabbitClient:
         return self._channel
 
     @channel.setter
-    def channel(self, value):
+    def channel(self, value) -> None:
         self._channel = value
+        self._observer.notify(self.app)
 
     @property
     def protocol(self):
         return self._protocol
 
     @protocol.setter
-    def protocol(self, value):
+    def protocol(self, value) -> None:
         self._protocol = value
 
+    @property
+    def transport(self):
+        return self._transport
+
+    def monitor_connection(self, observer) -> None:
+        logging.debug(f"Object {observer.__class__} registered to monitoring channel changes.")
+        self._observer.attach(observer)
+
     async def persistent_connect(self,
-                                 channel_max=1,
+                                 channel_max: int = 1,
                                  **kwargs: Dict[str, str]) -> None:
         while True:
             try:
@@ -71,9 +77,6 @@ class AioRabbitClient:
                 )
                 await self._configure_channel()
                 await asyncio.sleep(10)
-                for instance in self.instances:
-                    await asyncio.sleep(5)
-                    await instance.configure()
                 await self.protocol.wait_closed()
                 self._transport.close()
             except OSError:
@@ -85,7 +88,7 @@ class AioRabbitClient:
                 await asyncio.sleep(5)
                 await self.persistent_connect()
 
-    async def simple_connect(self, channel_max=1, **kwargs) -> None:
+    async def simple_connect(self, channel_max: int = 1, **kwargs) -> None:
         self._transport, self.protocol = await aioamqp.connect(
             host=self.host,
             port=self.port,
@@ -94,10 +97,10 @@ class AioRabbitClient:
         )
         await self._configure_channel()
 
-    async def connect(self, channel_max=1, **kwargs) -> None:
+    async def connect(self, channel_max: int = 1, **kwargs) -> None:
         await self.simple_connect(channel_max, **kwargs)
 
     async def _configure_channel(self) -> None:
         if self.protocol:
             await asyncio.sleep(5)
-            self._channel = await self.protocol.channel()
+            self.channel = await self.protocol.channel()

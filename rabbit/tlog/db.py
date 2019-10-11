@@ -34,7 +34,7 @@ class DB:
         try:
             self._connection = self._engine.connect()
         except Exception:
-            logging.error(f'Failed to connect to database: {self.driver}')
+            logging.error('Failed to connect to database. Trying again in 10 seconds')
             time.sleep(10)
             self.configure()
 
