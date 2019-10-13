@@ -32,6 +32,3 @@ class TestPollingPublish(asynctest.TestCase):
         payload = await self.format_payload(1, self.raw_body, False)
         with self.assertRaises(TypeError):
             await self.polling._assemble_event(payload)
-
-    async def test_configure_polling(self):
-        await self.polling.configure()

@@ -8,8 +8,8 @@ from aioamqp.channel import Channel
 
 import attr
 
-from rabbit.config import ConfigObserver
 from rabbit.exceptions import AttributeNotInitialized
+from rabbit.observer import Observer
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -29,7 +29,11 @@ class AioRabbitClient:
         default=int(os.getenv('BROKER_PORT', 5672)),
         validator=attr.validators.instance_of(int)
     )
-    _observer = attr.ib(type=ConfigObserver, default=ConfigObserver(), init=False)
+    _observer = attr.ib(
+        type=Observer,
+        default=Observer(),
+        init=False
+    )
     _channel = attr.ib(init=False, default=None)
     _protocol = attr.ib(init=False, default=None)
     _transport = attr.ib(init=False, default=None)
@@ -88,7 +92,7 @@ class AioRabbitClient:
                 await asyncio.sleep(5)
                 await self.persistent_connect()
 
-    async def simple_connect(self, channel_max: int = 1, **kwargs) -> None:
+    async def connect(self, channel_max: int = 1, **kwargs) -> None:
         self._transport, self.protocol = await aioamqp.connect(
             host=self.host,
             port=self.port,
@@ -96,9 +100,6 @@ class AioRabbitClient:
             **kwargs
         )
         await self._configure_channel()
-
-    async def connect(self, channel_max: int = 1, **kwargs) -> None:
-        await self.simple_connect(channel_max, **kwargs)
 
     async def _configure_channel(self) -> None:
         if self.protocol:

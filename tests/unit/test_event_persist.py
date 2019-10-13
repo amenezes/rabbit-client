@@ -18,15 +18,15 @@ class TestEventPersist(unittest.TestCase):
         }
         self.event_persist = EventPersist()
 
-    def test_if_event_payload_is_valid(self):
+    def test_valid_payload(self):
         payload = self.format_payload(self.payload)
         self.assertIsNone(
-            self.event_persist._is_valid(payload)
+            self.event_persist.save(payload)
         )
 
     def test_invalid_payload(self):
         with self.assertRaises(TypeError):
-            self.event_persist._is_valid(self.payload)
+            self.event_persist.save(self.payload)
 
     def test_get_db_connection(self):
         db = self.event_persist._get_db_connection()
@@ -35,7 +35,7 @@ class TestEventPersist(unittest.TestCase):
     def test_get_db_connection_singleton(self):
         db1 = self.event_persist._get_db_connection()
         db2 = self.event_persist._get_db_connection()
-        self.assertEqual(db1, db2)
+        self.assertEqual(id(db1), id(db2))
 
     def test_save(self):
         data = self.format_payload(self.payload)

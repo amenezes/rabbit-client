@@ -1,12 +1,12 @@
 import unittest
 
-from rabbit.config import ConfigObserver
+from rabbit.observer import Observer
 
 
-class TestConfig(unittest.TestCase):
+class TestObserver(unittest.TestCase):
 
     def setUp(self):
-        self.config_observer = ConfigObserver()
+        self.config_observer = Observer()
 
     def test_attach(self):
         self.config_observer.attach(list)

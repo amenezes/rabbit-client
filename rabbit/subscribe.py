@@ -14,7 +14,7 @@ from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
 from rabbit.exceptions import AttributeNotInitialized
 from rabbit.exchange import Exchange
-from rabbit.job import SampleJob
+from rabbit.job import echo_job
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.task import Task
@@ -67,7 +67,7 @@ class Subscribe:
     task = attr.ib(
         type=Task,
         default=Task(
-            job=SampleJob.echo_job
+            job=echo_job
         ),
         validator=attr.validators.instance_of(Task)
     )
@@ -150,8 +150,9 @@ class Subscribe:
         process_result = [bytes()]
         if self.task_type == 'process':
             process_result = await self.task.process_executor(data)
-        else:
-            process_result = await self.task.std_executor(data)
+            return process_result
+        # else:
+        process_result = await self.task.std_executor(data)
         return process_result
 
     async def callback(self,

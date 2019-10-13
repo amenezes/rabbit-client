@@ -30,12 +30,6 @@ class PollingPublisher:
         validator=attr.validators.instance_of(DB)
     )
 
-    async def configure(self) -> None:
-        self.db.configure()
-        if not self.publish.client:
-            await self.publish.configure()
-            await asyncio.sleep(5)
-
     async def run(self):
         self.db.configure()
         logging.info("Starting polling-publisher")
@@ -80,11 +74,12 @@ class PollingPublisher:
     async def _assemble_event(self, data) -> Event:
         if not isinstance(data, RowProxy):
             raise TypeError('data must be Rowproxy instance.')
+        identity, body, status = data
         event = Event(
-            body=bytes(data[1]),
-            status=data[2]
+            body=bytes(body),
+            status=status
         )
-        event.identity = data[0]
+        event.identity = identity
         return event
 
     async def _update_event_status(self, event: Event) -> None:

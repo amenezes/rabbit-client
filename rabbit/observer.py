@@ -6,8 +6,8 @@ import attr
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
-@attr.s(frozen=True)
-class ConfigObserver:
+@attr.s(slots=True, frozen=True)
+class Observer:
 
     _observers = attr.ib(
         type=list,
