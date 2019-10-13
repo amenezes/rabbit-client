@@ -67,19 +67,22 @@ class AioRabbitClient:
         logging.debug(f"Object {observer.__class__} registered to monitoring channel changes.")
         self._observer.attach(observer)
 
+    async def connect(self, channel_max: int = 1, **kwargs) -> None:
+        self._transport, self.protocol = await aioamqp.connect(
+            host=self.host,
+            port=self.port,
+            channel_max=channel_max,
+            **kwargs
+        )
+        await self._configure_channel()
+
     async def persistent_connect(self,
                                  channel_max: int = 1,
                                  **kwargs: Dict[str, str]) -> None:
         while True:
             try:
                 await asyncio.sleep(5)
-                self._transport, self.protocol = await aioamqp.connect(
-                    host=self.host,
-                    port=self.port,
-                    channel_max=1,
-                    **kwargs
-                )
-                await self._configure_channel()
+                await self.connect(channel_max, **kwargs)
                 await asyncio.sleep(10)
                 await self.protocol.wait_closed()
                 self._transport.close()
@@ -91,15 +94,6 @@ class AioRabbitClient:
                 logging.info(f'Trying connect on {self.host}:{self.port}')
                 await asyncio.sleep(5)
                 await self.persistent_connect()
-
-    async def connect(self, channel_max: int = 1, **kwargs) -> None:
-        self._transport, self.protocol = await aioamqp.connect(
-            host=self.host,
-            port=self.port,
-            channel_max=channel_max,
-            **kwargs
-        )
-        await self._configure_channel()
 
     async def _configure_channel(self) -> None:
         if self.protocol:

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import attr
 
@@ -10,7 +10,6 @@ from rabbit.tlog.db import DB
 from rabbit.tlog.event import Event
 from rabbit.tlog.queries import EventQueries
 
-from sqlalchemy.engine.result import RowProxy
 from sqlalchemy.sql import text
 
 
@@ -59,27 +58,27 @@ class PollingPublisher:
             )
 
     async def _retrieve_event(self) -> Optional[Event]:
+        result = await self._get_result()
+        if result:
+            event = await self._assemble_event(result)
+            return event
+        return None
+
+    async def _get_result(self) -> Optional[Any]:
         stmt = text(EventQueries.OLDEST_EVENT.value)
         result = self.db.execute(stmt)
-        event = None
         if result:
-            result = result.first()
-            logging.debug(f"Successfully recovered event: {result}")
-            try:
-                event = await self._assemble_event(result)
-            except TypeError:
-                pass
-        return event
+            logging.debug(f"Successfully recovered event.")
+            return result.first()
+        return None
 
-    async def _assemble_event(self, data) -> Event:
-        if not isinstance(data, RowProxy):
-            raise TypeError('data must be Rowproxy instance.')
+    async def _assemble_event(self, data: tuple) -> Event:
         identity, body, status = data
         event = Event(
+            identity=identity,
             body=bytes(body),
             status=status
         )
-        event.identity = identity
         return event
 
     async def _update_event_status(self, event: Event) -> None:

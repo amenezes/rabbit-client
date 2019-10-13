@@ -27,14 +27,15 @@ class TestSubscribeIntegration(asynctest.TestCase):
     async def test_configure_subscribe_without_publish(self):
         await self.subscribe.configure()
 
-    @asynctest.skip
     async def test_create_subscribe_with_publish(self):
-        subscribe = Subscribe(client=self.client, publish=Publish())
+        subscribe = Subscribe(
+            client=self.client,
+            publish=Publish(client=self.client)
+        )
         self.assertIsInstance(subscribe.publish, Publish)
 
-    @asynctest.skip
     async def test_subscribe_set_valid_publish(self):
-        self.subscribe.publish = Publish()
+        self.subscribe.publish = Publish(client=self.client)
         await self.subscribe.configure()
 
     async def test_subscribe_set_invalid_publish(self):
