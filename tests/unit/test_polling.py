@@ -1,17 +1,16 @@
-from unittest.mock import patch, MagicMock
-
 import asynctest
 
 from rabbit.client import AioRabbitClient
-from rabbit.publish import Publish
 from rabbit.polling import PollingPublisher
-from rabbit.tlog.event import Event
+from rabbit.publish import Publish
 from rabbit.tlog.db import DB
+from rabbit.tlog.event import Event
 
 
 class ResponseMock:
     def first(self):
         return (1, b'123', False)
+
 
 class DBMock(DB):
     value = False
@@ -35,7 +34,6 @@ class TestPollingPublisher(asynctest.TestCase):
         result = await self.polling._assemble_event((1, b'teste', False))
         self.assertIsInstance(result, Event)
 
-    
     async def test_retrieve_valid_event(self):
         polling = PollingPublisher(
             publish=self.publish, db=DBMock(True)
