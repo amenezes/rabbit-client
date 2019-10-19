@@ -1,5 +1,5 @@
-[tool.partray]
-modules = ['rabbit']
+[tool.portray]
+modules = ["rabbit"]
 
 [tool.portray.mkdocs.theme]
 favicon = "docs/bunny.png"

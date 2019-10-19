@@ -35,8 +35,10 @@ ifeq ($(CLEAN_TEST_ENV), "true")
 	make clean
 endif
 
-doc: 
+docs:
 	@echo "> generate project documentation..."
+	export PYTHONPATH=.
+	portray as_html
 
 install-deps:
 	@echo "> installing dependencies..."
@@ -56,7 +58,7 @@ about:
 	@echo ""
 	@echo "make lint         - Runs flake8 and mypy."
 	@echo "make tests        - Execute tests."
-	@echo "make doc          - Generate project documentation."
+	@echo "make docs         - Generate project documentation."
 	@echo "make install-deps - Install development dependencies."
 	@echo "make venv         - Install virtualenv and create venv directory."
 	@echo ""
@@ -71,7 +73,7 @@ ci:
 	./cc-test-reporter format-coverage -t coverage.py -o codeclimate.json
 	./cc-test-reporter upload-coverage -i codeclimate.json -r $$CC_TEST_REPORTER_ID
 
-all: flake tests doc docker-pub clean
+all: flake tests docs docker-pub clean
 
 
-.PHONY: flake clean tests doc install-deps venv ci all
+.PHONY: flake clean tests docs install-deps venv ci all
