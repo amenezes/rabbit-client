@@ -44,10 +44,6 @@ class TestDLX(asynctest.TestCase):
     async def test_client_property(self):
         self.assertIsNone(self.dlx.client)
 
-    async def test_set_invalid_client_property(self):
-        with self.assertRaises(ValueError):
-            self.dlx.client = None
-
     async def test_set_client_property(self):
         self.dlx.client = AioRabbitClient()
 

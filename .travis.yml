@@ -12,3 +12,14 @@ script:
   - make lint  # execute flake8 and mypy
   - make tests # execute unit and integration tests
   - make ci    # publishes tests reports
+before_deploy:
+  - make docs  # generate project documentation
+deploy:
+  provider: s3
+  access_key_id: $S3_ACCESS_KEY
+  secret_access_key: $S3_ACCESS_SECRET_KEY
+  bucket: $BUCKET
+  skip_cleanup: true
+  local_dir: site
+  on:
+    branch: master

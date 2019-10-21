@@ -1,6 +1,6 @@
 import unittest
 
-from rabbit.job import SampleJob
+from rabbit.job import echo_job
 
 
 class TestSampleJob(unittest.TestCase):
@@ -9,4 +9,4 @@ class TestSampleJob(unittest.TestCase):
         self.payload = b'{"mykey": 123}'
 
     def test_sample_job_echo(self):
-        self.assertIsInstance(SampleJob.echo_job(self.payload), bytes)
+        self.assertIsInstance(echo_job(self.payload), bytes)

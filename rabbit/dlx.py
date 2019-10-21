@@ -50,10 +50,7 @@ class DLX:
 
     @client.setter
     def client(self, client: AioRabbitClient) -> None:
-        if not isinstance(client, AioRabbitClient):
-            raise ValueError('client must be AioRabbitClient instance.')
         self._client = client
-        self._client.instances.append(self)
 
     async def configure(self) -> None:
         try:
@@ -61,10 +58,9 @@ class DLX:
             await self._configure_queue()
             await self._configure_queue_bind()
         except AttributeError:
-            raise OperationError(
-                'Ensure that connect() method '
-                'has been called in the AioRabbitClient instance.'
-            )
+            await self.client.persistent_connect()
+            await asyncio.sleep(5)
+            await self.configure()
 
     async def _configure_exchange(self) -> None:
         logging.debug(
@@ -140,8 +136,7 @@ class DLX:
             )
         except AttributeError:
             raise OperationError(
-                'Ensure that connect() method '
-                'has been called in the AioRabbitClient instance.'
+                'Ensure that instance was connected '
             )
 
     async def _get_timeout(self, headers, delay=5000):

@@ -26,8 +26,7 @@ class Task:
     )
 
     async def process_executor(self, *args, **kwargs):
-        if not callable(self.job):
-            raise TypeError('Job must be callable.')
+        attr.validate(self)
 
         logging.debug('Starting ProcessPoolExecutor...')
         logging.debug(f'args received: {args}')
@@ -47,8 +46,7 @@ class Task:
         return results
 
     async def std_executor(self, *args, **kwargs):
-        if not callable(self.job):
-            raise TypeError('Job must be callable.')
+        attr.validate(self)
 
         logging.debug('Starting StandardExecutor...')
         logging.debug(f'args received: {args}')
@@ -56,6 +54,5 @@ class Task:
         if asyncio.iscoroutinefunction(self.job):
             result = await self.job(*args, **kwargs)
             return [result]
-        else:
-            result = self.job(*args, **kwargs)
-            return [result]
+        result = self.job(*args, **kwargs)
+        return [result]

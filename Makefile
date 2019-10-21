@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := about
 RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
+POSTGRES_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep postgres | wc -l)
 VENV_DIR := $(shell [ ! -d "venv" ] && echo 1 || echo 0)
-CLEAN_TEST_ENV := "true"
+CLEAN_TEST_ENV := "false"
 
 lint:
 	@echo "> executing flake8 to check codestyle..."
@@ -22,14 +23,22 @@ ifeq ($(RABBIT_INSTANCE), 0)
 	docker-compose -f example/docker-compose.yml up -d rabbit
 	sleep 15
 endif
+ifeq ($(POSTGRES_INSTANCE), 0)
+	@echo "> initializing postgres container..."
+	docker-compose -f example/docker-compose.yml up -d postgres
+	sleep 10
+endif
+	alembic -c example/migrations/alembic.ini upgrade head
 	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
 ifeq ($(CLEAN_TEST_ENV), "true")
 	@echo "> cleaning test environment..."
 	make clean
 endif
 
-doc: 
+docs:
 	@echo "> generate project documentation..."
+	export PYTHONPATH=.
+	portray as_html
 
 install-deps:
 	@echo "> installing dependencies..."
@@ -49,7 +58,7 @@ about:
 	@echo ""
 	@echo "make lint         - Runs flake8 and mypy."
 	@echo "make tests        - Execute tests."
-	@echo "make doc          - Generate project documentation."
+	@echo "make docs         - Generate project documentation."
 	@echo "make install-deps - Install development dependencies."
 	@echo "make venv         - Install virtualenv and create venv directory."
 	@echo ""
@@ -64,7 +73,7 @@ ci:
 	./cc-test-reporter format-coverage -t coverage.py -o codeclimate.json
 	./cc-test-reporter upload-coverage -i codeclimate.json -r $$CC_TEST_REPORTER_ID
 
-all: flake tests doc docker-pub clean
+all: flake tests docs docker-pub clean
 
 
-.PHONY: flake clean tests doc install-deps venv ci all
+.PHONY: flake clean tests docs install-deps venv ci all

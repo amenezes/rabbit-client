@@ -3,7 +3,7 @@ import asyncio
 import asynctest
 
 from rabbit.client import AioRabbitClient
-from rabbit.job import SampleJob
+from rabbit.job import echo_job
 from rabbit.subscribe import Subscribe
 from rabbit.task import Task
 
@@ -19,7 +19,7 @@ class TestSubscribe(asynctest.TestCase):
             client=AioRabbitClient(),
             task=Task(
                 app=asyncio.get_event_loop(),
-                job=SampleJob.echo_job
+                job=echo_job
             ),
             task_type='process'
         )

@@ -25,6 +25,7 @@ class TestPublishIntegration(asynctest.TestCase):
     async def test_configure_publish(self):
         await self.publish.configure()
 
+    @asynctest.skip
     async def test_client_connect_on_publish(self):
         publish = Publish(AioRabbitClient())
         await publish.configure()

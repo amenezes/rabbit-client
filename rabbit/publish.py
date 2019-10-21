@@ -3,6 +3,8 @@ import logging
 import os
 from typing import Optional
 
+from aioamqp.exceptions import SynchronizationError
+
 import attr
 
 from rabbit.client import AioRabbitClient
@@ -41,16 +43,18 @@ class Publish:
         validator=attr.validators.instance_of(Queue)
     )
 
+    def __attrs_post_init__(self):
+        self._client.monitor_connection(self)
+
     @property
-    def client(self):
+    def client(self) -> Optional[AioRabbitClient]:
         return self._client
 
     @client.setter
     def client(self, client: AioRabbitClient) -> None:
         if not isinstance(client, AioRabbitClient):
             raise ValueError('client must be AioRabbitClient instance.')
-        self._client = client
-        self._client.instances.append(self)
+        logging.info('Registering connection monitoring')
 
     async def configure(self) -> None:
         try:
@@ -58,10 +62,11 @@ class Publish:
             await self._configure_queue()
             await self._configure_queue_bind()
         except AttributeNotInitialized:
-            await self.client.connect()
-            await self.configure()
+            logging.debug('Waiting client initialization...PUBLISH')
+        except SynchronizationError:
+            pass
 
-    async def _configure_exchange(self) -> None:
+    async def _configure_exchange(self):
         logging.debug(
             "Configuring Publish exchange: ["
             f"exchange_name: {self.exchange.name}] | "
@@ -75,7 +80,7 @@ class Publish:
         )
         await asyncio.sleep(2)
 
-    async def _configure_queue(self) -> None:
+    async def _configure_queue(self):
         logging.debug(
             "Configuring Publish queue: ["
             f"queue_name: {self.queue.name}] | "
@@ -86,7 +91,7 @@ class Publish:
             durable=self.queue.durable
         )
 
-    async def _configure_queue_bind(self) -> None:
+    async def _configure_queue_bind(self):
         logging.debug(
             "Configuring Publish queue bind: ["
             f"exchange_name: {self.exchange.name}] | "
@@ -99,7 +104,7 @@ class Publish:
             routing_key=self.exchange.topic
         )
 
-    async def send_event(self, payload: bytes, **kwargs) -> None:
+    async def send_event(self, payload, **kwargs):
         await self.client.channel.publish(
             payload=payload,
             exchange_name=self.exchange.name,

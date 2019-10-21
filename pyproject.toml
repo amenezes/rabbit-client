@@ -1,3 +1,6 @@
+[tool.portray]
+modules = ["rabbit"]
+
 [tool.portray.mkdocs.theme]
 favicon = "docs/bunny.png"
 logo = "docs/bunny.png"
