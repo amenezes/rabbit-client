@@ -5,6 +5,7 @@ services:
 python:
   - 3.6
   - 3.7
+  - 3.8
 install:
   - pip install docker-compose
   - pip install -r requirements-dev.txt
