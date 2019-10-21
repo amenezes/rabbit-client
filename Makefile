@@ -37,6 +37,7 @@ endif
 
 docs:
 	@echo "> generate project documentation..."
+	pip install portray
 	export PYTHONPATH=.
 	portray as_html
 
