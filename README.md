@@ -24,4 +24,4 @@ pip install -U rabbit-client
 - License: [Apache License](https://choosealicense.com/licenses/apache-2.0/)
 - Code: [https://github.com/amenezes/rabbit-client](https://github.com/amenezes/rabbit-client)
 - Issue Tracker: [https://github.com/amenezes/rabbit-client/issues](https://github.com/amenezes/rabbit-client/issues)
-- Documentation: [https://rabbit-client.amenezes.dev](https://rabbit-client.amenezes.dev)
+- Documentation: [https://rabbit-client.amenezes.dev](https://rabbit-client.amenezes.net)
