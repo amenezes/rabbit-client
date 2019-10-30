@@ -25,8 +25,8 @@ class PollingPublisher:
     )
     db = attr.ib(
         type=DB,
-        default=DB(),
-        validator=attr.validators.instance_of(DB)
+        default=DB()
+        # validator=attr.validators.instance_of(DB)
     )
 
     async def run(self):
@@ -38,7 +38,7 @@ class PollingPublisher:
             if not event:
                 logging.debug('There are no new events to be processed...')
             else:
-                logging.debug(
+                logging.info(
                     f'Event id:{event.identity} successfully processed.'
                 )
                 await self._send_and_update(event)
@@ -47,7 +47,7 @@ class PollingPublisher:
         try:
             await self.publish.send_event(event.body)
             await self._update_event_status(event)
-            logging.debug(
+            logging.info(
                 'Event successfully sent and updated!'
                 f' [event_id: {event.identity}]'
             )

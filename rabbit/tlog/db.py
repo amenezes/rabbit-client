@@ -5,6 +5,8 @@ from typing import Any
 
 import attr
 
+from rabbit.tlog.core import singleton
+
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.elements import TextClause
@@ -13,6 +15,7 @@ from sqlalchemy.sql.elements import TextClause
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
+@singleton
 @attr.s(slots=True)
 class DB:
     driver = attr.ib(
@@ -20,15 +23,19 @@ class DB:
         default=os.getenv(
             'DATABASE_DRIVER',
             'postgresql://postgres:postgres@localhost:5432/db'
-        )
+        ),
+        validator=attr.validators.instance_of(str)
     )
     _engine = attr.ib(default=None)
     _connection = attr.ib(default=None)
     _stmt = attr.ib(
-        init=False,
         type=TextClause,
-        validator=attr.validators.instance_of(TextClause)
+        validator=attr.validators.instance_of(TextClause),
+        init=False
     )
+
+    def __attrs_post_init__(self):
+        self.configure()
 
     def configure(self) -> None:
         self._engine = create_engine(self.driver)

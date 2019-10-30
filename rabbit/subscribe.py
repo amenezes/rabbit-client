@@ -18,7 +18,7 @@ from rabbit.job import echo_job
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.task import Task
-
+from rabbit.tlog.event_persist import EventPersist
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -83,6 +83,13 @@ class Subscribe:
         default=None,
         validator=attr.validators.optional(
             validator=attr.validators.instance_of(Publish)
+        )
+    )
+    _persist = attr.ib(
+        type=Optional[EventPersist],
+        default=None,
+        validator=attr.validators.optional(
+            validator=attr.validators.instance_of(EventPersist)
         )
     )
 
@@ -167,6 +174,9 @@ class Subscribe:
             if self.publish:
                 for result in process_result:
                     await self.publish.send_event(result)
+            elif self._persist:
+                for result in process_result:
+                    self._persist.save(result)
             else:
                 return process_result
         except Exception as cause:

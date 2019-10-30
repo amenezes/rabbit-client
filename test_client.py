@@ -11,7 +11,7 @@ from rabbit.tlog import echo_persist_job
 
 
 async def handle_info(request):
-    return web.json_response({'app': 'aio-rabbit-client'})
+    return web.json_response({'app': 'rabbit-client'})
 
 
 async def handle_status(request):

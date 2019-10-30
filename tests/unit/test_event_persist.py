@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from rabbit.tlog.db import DB
+# from rabbit.tlog.db import DB
 from rabbit.tlog.event_persist import EventPersist
 
 
@@ -28,15 +28,13 @@ class TestEventPersist(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.event_persist.save(self.payload)
 
-    def test_get_db_connection(self):
-        db = self.event_persist._get_db_connection()
-        self.assertIsInstance(db, DB)
-
     def test_get_db_connection_singleton(self):
-        db1 = self.event_persist._get_db_connection()
-        db2 = self.event_persist._get_db_connection()
+        db1 = self.event_persist.db
+        event_persist2 = EventPersist()
+        db2 = event_persist2.db
         self.assertEqual(id(db1), id(db2))
 
     def test_save(self):
         data = self.format_payload(self.payload)
+        self.assertIsNotNone(self.event_persist.db)
         self.event_persist.save(data)
