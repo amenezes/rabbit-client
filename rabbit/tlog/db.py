@@ -5,7 +5,7 @@ from typing import Any
 
 import attr
 
-from rabbit.tlog.core import singleton
+# from rabbit.tlog.core import singleton
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
@@ -15,7 +15,7 @@ from sqlalchemy.sql.elements import TextClause
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
-@singleton
+# @singleton
 @attr.s(slots=True)
 class DB:
     driver = attr.ib(

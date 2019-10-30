@@ -45,6 +45,7 @@ class TestPollingPublisher(asynctest.TestCase):
         polling = PollingPublisher(
             publish=self.publish, db=DBMock()
         )
+
         response = await polling._retrieve_event()
         self.assertIsNone(response)
 

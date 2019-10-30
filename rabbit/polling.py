@@ -25,8 +25,8 @@ class PollingPublisher:
     )
     db = attr.ib(
         type=DB,
-        default=DB()
-        # validator=attr.validators.instance_of(DB)
+        default=DB(),
+        validator=attr.validators.instance_of(DB)
     )
 
     async def run(self):

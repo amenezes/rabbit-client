@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from contextlib import suppress
 from typing import Optional
 
 from aioamqp.exceptions import SynchronizationError
@@ -57,14 +58,13 @@ class Publish:
         logging.info('Registering connection monitoring')
 
     async def configure(self) -> None:
-        try:
-            await self._configure_exchange()
-            await self._configure_queue()
-            await self._configure_queue_bind()
-        except AttributeNotInitialized:
-            logging.debug('Waiting client initialization...PUBLISH')
-        except SynchronizationError:
-            pass
+        with suppress(SynchronizationError):
+            try:
+                await self._configure_exchange()
+                await self._configure_queue()
+                await self._configure_queue_bind()
+            except AttributeNotInitialized:
+                logging.debug('Waiting client initialization...PUBLISH')
 
     async def _configure_exchange(self):
         logging.debug(
