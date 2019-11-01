@@ -26,11 +26,11 @@ class Task:
     )
 
     async def process_executor(self, *args, **kwargs):
-        attr.validate(self)
-
         logging.debug('Starting ProcessPoolExecutor...')
         logging.debug(f'args received: {args}')
         logging.debug(f'kwargs receveid: {kwargs}')
+
+        attr.validate(self)
         task = [
             self._app.run_in_executor(
                 self.process,
@@ -46,11 +46,11 @@ class Task:
         return results
 
     async def std_executor(self, *args, **kwargs):
-        attr.validate(self)
-
         logging.debug('Starting StandardExecutor...')
         logging.debug(f'args received: {args}')
         logging.debug(f'kwargs receveid: {kwargs}')
+
+        attr.validate(self)
         if asyncio.iscoroutinefunction(self.job):
             result = await self.job(*args, **kwargs)
             return [result]

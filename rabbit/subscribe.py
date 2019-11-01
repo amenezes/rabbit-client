@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from contextlib import suppress
 from typing import List, Optional
 
 from aioamqp.channel import Channel
@@ -105,24 +106,22 @@ class Subscribe:
 
     @publish.setter
     def publish(self, publish: Publish) -> None:
-        if not isinstance(publish, Publish):
-            raise ValueError('publish must be Publish instance.')
         logging.info('Registering connection monitoring')
+        attr.validate(publish)
         self._publish = publish
         self._publish.client = self.client
 
     async def configure(self) -> None:
-        await asyncio.sleep(5)
-        try:
-            await self._configure_exchange()
-            await self._configure_queue()
-            await self.dlx.configure()
-            await self._configure_publish()
-            await self._configure_queue_bind()
-        except AttributeNotInitialized:
-            logging.debug('Waiting client initialization...SUBSCRIBE')
-        except SynchronizationError:
-            pass
+        with suppress(SynchronizationError):
+            await asyncio.sleep(5)
+            try:
+                await self._configure_exchange()
+                await self._configure_queue()
+                await self.dlx.configure()
+                await self._configure_publish()
+                await self._configure_queue_bind()
+            except AttributeNotInitialized:
+                logging.debug('Waiting client initialization...SUBSCRIBE')
 
     async def _configure_publish(self) -> None:
         if self.publish:
@@ -158,7 +157,6 @@ class Subscribe:
         if self.task_type == 'process':
             process_result = await self.task.process_executor(data)
             return process_result
-        # else:
         process_result = await self.task.std_executor(data)
         return process_result
 
@@ -167,21 +165,22 @@ class Subscribe:
                        body: bytes,
                        envelope: Envelope,
                        properties: Properties):
+        process_result = [bytes()]
         try:
             process_result = await self._execute(body)
             await self.ack_event(envelope)
-
-            if self.publish:
-                for result in process_result:
-                    await self.publish.send_event(result)
-            elif self._persist:
-                for result in process_result:
-                    self._persist.save(result)
-            else:
-                return process_result
         except Exception as cause:
             await self.dlx.send_event(cause, body, envelope, properties)
             await self.reject_event(envelope)
+
+        if self.publish:
+            for result in process_result:
+                await self.publish.send_event(result)
+        elif self._persist:
+            for result in process_result:
+                self._persist.save(result)
+        else:
+            return process_result
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         await self.client.channel.basic_client_nack(

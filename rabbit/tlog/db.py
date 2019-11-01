@@ -5,8 +5,6 @@ from typing import Any
 
 import attr
 
-# from rabbit.tlog.core import singleton
-
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.elements import TextClause
@@ -15,7 +13,6 @@ from sqlalchemy.sql.elements import TextClause
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
-# @singleton
 @attr.s(slots=True)
 class DB:
     driver = attr.ib(
@@ -28,11 +25,6 @@ class DB:
     )
     _engine = attr.ib(default=None)
     _connection = attr.ib(default=None)
-    _stmt = attr.ib(
-        type=TextClause,
-        validator=attr.validators.instance_of(TextClause),
-        init=False
-    )
 
     def __attrs_post_init__(self):
         self.configure()
@@ -42,20 +34,20 @@ class DB:
         try:
             self._connection = self._engine.connect()
         except Exception:
-            logging.error('Failed to connect to database. Trying again in 10 seconds')
+            logging.error(
+                'Failed to connect to database. Trying again in 10 seconds'
+            )
             time.sleep(10)
             self.configure()
 
     def execute(self, stmt: TextClause, **kwargs) -> Any:
-        self._configure_stmt(stmt)
+        if not isinstance(stmt, TextClause):
+            raise TypeError('stmt must be of TextClause type.')
         result = None
+        attr.validate(self)
         try:
             result = self._connection.execute(stmt, kwargs)
         except OperationalError:
             self.configure()
             self.execute(stmt)
         return result
-
-    def _configure_stmt(self, stmt: TextClause) -> None:
-        self._stmt = stmt
-        attr.validate(self)

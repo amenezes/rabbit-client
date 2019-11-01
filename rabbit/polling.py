@@ -30,10 +30,12 @@ class PollingPublisher:
     )
 
     async def run(self):
-        self.db.configure()
         logging.info("Starting polling-publisher")
+        self.db.configure()
         while True:
-            await asyncio.sleep(os.getenv('POLLING_STANDBY_TIME', 60))
+            await asyncio.sleep(
+                float(os.getenv('POLLING_STANDBY_TIME', 60))
+            )
             event = await self._retrieve_event()
             if not event:
                 logging.debug('There are no new events to be processed...')

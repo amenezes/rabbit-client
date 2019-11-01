@@ -36,6 +36,6 @@ class EventPersist:
             created_at=event.created_at,
             created_by=event.created_by
         )
+        self.db.execute(stmt)
         logging.debug(f'Saving event: [{event}]')
         logging.info(f'Event saved.')
-        self.db.execute(stmt)

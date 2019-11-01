@@ -102,7 +102,6 @@ class DLX:
             f"type_name: {queue_name}"
             f" | routing_key: {self.routing_key}]"
         )
-
         await self._client.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=queue_name,
@@ -119,10 +118,11 @@ class DLX:
                          body: bytes,
                          envelope: Envelope,
                          properties: Properties) -> None:
-        logging.error(f'Error to process event: {cause}')
         timeout = await self._get_timeout(properties.headers)
-        logging.debug(f'timeout: {timeout}')
         properties = await self._get_properties(timeout, cause, envelope)
+
+        logging.error(f'Error to process event: {cause}')
+        logging.debug(f'timeout: {timeout}')
         logging.debug(
             f'send event to dlq: [exchange: {self.dlx_exchange.name}'
             f' | queue: {self.dlq_queue.name} | properties: {properties}]'

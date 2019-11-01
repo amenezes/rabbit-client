@@ -64,7 +64,10 @@ class AioRabbitClient:
         return self._transport
 
     def monitor_connection(self, observer) -> None:
-        logging.debug(f"Object {observer.__class__} registered to monitoring channel changes.")
+        logging.debug(
+            f"Object {observer.__class__} "
+            "registered to monitoring channel changes."
+        )
         self._observer.attach(observer)
 
     async def connect(self, channel_max: int = 1, **kwargs) -> None:
