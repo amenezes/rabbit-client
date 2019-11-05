@@ -28,7 +28,7 @@ class TestPollingPublisher(asynctest.TestCase):
 
     async def setUp(self):
         self.publish = Publish(client=AioRabbitClient())
-        self.polling = PollingPublisher(self.publish)
+        self.polling = PollingPublisher(DB(), self.publish)
 
     async def test_assemble_event(self):
         result = await self.polling._assemble_event((1, b'teste', False))

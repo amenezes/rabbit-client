@@ -5,6 +5,7 @@ import asynctest
 from rabbit.client import AioRabbitClient
 from rabbit.polling import PollingPublisher
 from rabbit.publish import Publish
+from rabbit.tlog.db import DB
 
 
 class TestPollingPublish(asynctest.TestCase):
@@ -20,6 +21,7 @@ class TestPollingPublish(asynctest.TestCase):
         }
         self.body = bytes(json.dumps(self.raw_body), 'utf-8')
         self.polling = PollingPublisher(
+            DB(),
             Publish(client=AioRabbitClient())
         )
 
