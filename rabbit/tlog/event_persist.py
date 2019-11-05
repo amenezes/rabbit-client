@@ -19,7 +19,6 @@ class EventPersist:
 
     db = attr.ib(
         type=DB,
-        default=DB(),
         validator=attr.validators.instance_of(DB)
     )
     _stmt = attr.ib(

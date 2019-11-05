@@ -19,14 +19,13 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 @attr.s(slots=True, frozen=True)
 class PollingPublisher:
 
+    db = attr.ib(
+        type=DB,
+        validator=attr.validators.instance_of(DB)
+    )
     publish = attr.ib(
         type=Publish,
         validator=attr.validators.instance_of(Publish)
-    )
-    db = attr.ib(
-        type=DB,
-        default=DB(),
-        validator=attr.validators.instance_of(DB)
     )
 
     async def run(self):

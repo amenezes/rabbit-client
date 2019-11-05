@@ -30,6 +30,7 @@ class DB:
         self.configure()
 
     def configure(self) -> None:
+        logging.debug(f'DB(driver: {self.driver})')
         self._engine = create_engine(self.driver)
         try:
             self._connection = self._engine.connect()
@@ -37,6 +38,7 @@ class DB:
             logging.error(
                 'Failed to connect to database. Trying again in 10 seconds'
             )
+            logging.debug(f'DB({attr.asdict(self)})')
             time.sleep(10)
             self.configure()
 
