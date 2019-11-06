@@ -50,10 +50,7 @@ class DLX:
 
     @client.setter
     def client(self, client: AioRabbitClient) -> None:
-        if not isinstance(client, AioRabbitClient):
-            raise ValueError('client must be AioRabbitClient instance.')
         self._client = client
-        self._client.instances.append(self)
 
     async def configure(self) -> None:
         try:
@@ -61,10 +58,9 @@ class DLX:
             await self._configure_queue()
             await self._configure_queue_bind()
         except AttributeError:
-            raise OperationError(
-                'Ensure that connect() method '
-                'has been called in the AioRabbitClient instance.'
-            )
+            await self.client.persistent_connect()
+            await asyncio.sleep(5)
+            await self.configure()
 
     async def _configure_exchange(self) -> None:
         logging.debug(
@@ -106,7 +102,6 @@ class DLX:
             f"type_name: {queue_name}"
             f" | routing_key: {self.routing_key}]"
         )
-
         await self._client.channel.queue_bind(
             exchange_name=self.dlx_exchange.name,
             queue_name=queue_name,
@@ -123,10 +118,11 @@ class DLX:
                          body: bytes,
                          envelope: Envelope,
                          properties: Properties) -> None:
-        logging.error(f'Error to process event: {cause}')
         timeout = await self._get_timeout(properties.headers)
-        logging.debug(f'timeout: {timeout}')
         properties = await self._get_properties(timeout, cause, envelope)
+
+        logging.error(f'Error to process event: {cause}')
+        logging.debug(f'timeout: {timeout}')
         logging.debug(
             f'send event to dlq: [exchange: {self.dlx_exchange.name}'
             f' | queue: {self.dlq_queue.name} | properties: {properties}]'
@@ -140,8 +136,7 @@ class DLX:
             )
         except AttributeError:
             raise OperationError(
-                'Ensure that connect() method '
-                'has been called in the AioRabbitClient instance.'
+                'Ensure that instance was connected '
             )
 
     async def _get_timeout(self, headers, delay=5000):

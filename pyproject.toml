@@ -1,0 +1,9 @@
+[tool.portray]
+modules = ["rabbit"]
+
+[tool.portray.mkdocs.theme]
+favicon = "docs/bunny.png"
+logo = "docs/bunny.png"
+name = "material"
+palette = {primary = "deep-orange", accent = "gray"}
+

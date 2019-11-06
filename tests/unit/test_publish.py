@@ -7,7 +7,7 @@ from rabbit.publish import Publish
 class TestPublish(asynctest.TestCase):
 
     async def setUp(self):
-        self.publish = Publish()
+        self.publish = Publish(client=AioRabbitClient())
 
     async def test_set_client_property(self):
         self.publish.client = AioRabbitClient()
