@@ -1,16 +1,14 @@
 import asyncio
+import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Optional
 
 import attr
 
 from rabbit.publish import Publish
 from rabbit.tlog.db import DB
-from rabbit.tlog.event import Event
-from rabbit.tlog.queries import EventQueries
-
-from sqlalchemy.sql import text
+from rabbit.tlog.event import Event, events
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -40,49 +38,51 @@ class PollingPublisher:
                 logging.debug('There are no new events to be processed...')
             else:
                 logging.info(
-                    f'Event id:{event.identity} successfully processed.'
+                    f'Event id:{event.id} sent to message broker.'
                 )
                 await self._send_and_update(event)
 
     async def _send_and_update(self, event: Event) -> None:
         try:
-            await self.publish.send_event(event.body)
+            payload = self._format_payload(event)
+            logging.debug(f"Payload: {payload}")
+
+            await self.publish.send_event(payload)
             await self._update_event_status(event)
             logging.info(
                 'Event successfully sent and updated!'
-                f' [event_id: {event.identity}]'
+                f' [event_id: {event.id}]'
             )
-        except Exception:
-            await asyncio.sleep(10)
+        except Exception as err:
             logging.error(
-                f"Failed to publish event id: {event.identity}"
+                f"Failed to publish event id: {event.id}"
             )
+            logging.error(err)
+            await asyncio.sleep(10)
+
+    def _format_payload(self, event) -> bytes:
+        payload = json.loads(event.body)
+        payload.update({'createdBy': event.created_by})
+        return bytes(json.dumps(payload), 'utf-8')
 
     async def _retrieve_event(self) -> Optional[Event]:
-        result = await self._get_result()
-        if result:
-            event = await self._assemble_event(result)
-            return event
-        return None
+        event = await self.db.get_oldest_event()
+        logging.debug(f"Oldest event retrieved: {event}")
 
-    async def _get_result(self) -> Optional[Any]:
-        stmt = text(EventQueries.OLDEST_EVENT.value)
-        result = self.db.execute(stmt)
-        if result:
-            logging.debug(f"Successfully recovered event.")
-            return result.first()
-        return None
+        if not event:
+            return None
 
-    async def _assemble_event(self, data: tuple) -> Event:
-        identity, body, status = data
-        event = Event(
-            identity=identity,
-            body=bytes(body),
-            status=status
+        logging.debug(f"Successfully recovered event.")
+        return Event(
+            id=event.id,
+            body=event.body,
+            created_at=event.created_at,
+            created_by=event.created_by,
+            status=event.status
         )
-        return event
 
     async def _update_event_status(self, event: Event) -> None:
-        stmt = text(EventQueries.UPDATE_EVENT_STATUS.value)
-        stmt = stmt.bindparams(identity=event.identity)
-        self.db.execute(stmt)
+        stmt = events.update().where(events.c.id == event.id).values(
+            status=True
+        )
+        await self.db.exec(stmt)

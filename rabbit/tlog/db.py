@@ -1,13 +1,16 @@
 import logging
 import os
 import time
-from typing import Any
+from datetime import datetime
 
 import attr
 
+from rabbit.exceptions import OperationError
+from rabbit.tlog.event import Event, events
+
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.sql.elements import TextClause
+from sqlalchemy.orm import sessionmaker
 
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -25,31 +28,85 @@ class DB:
     )
     _engine = attr.ib(default=None)
     _connection = attr.ib(default=None)
+    _session = attr.ib(default=None)
 
     def __attrs_post_init__(self):
         self.configure()
 
+    @property
+    def connection(self):
+        return self._connection
+
+    @connection.setter
+    def connection(self, value):
+        if self._connection:
+            self._connection.invalidate()
+        self._connection = value
+
+    @property
+    def session(self):
+        return self._session
+
+    @session.setter
+    def session(self, value):
+        if self._session:
+            self._session.invalidate()
+        self._session = value
+
     def configure(self) -> None:
-        logging.debug(f'DB(driver: {self.driver})')
-        self._engine = create_engine(self.driver)
+        self._engine = create_engine(self.driver, pool_pre_ping=True)
+        Session = sessionmaker(bind=self._engine)
+        self._session = Session()
+
         try:
             self._connection = self._engine.connect()
         except Exception:
-            logging.error(
-                'Failed to connect to database. Trying again in 10 seconds'
-            )
-            logging.debug(f'DB({attr.asdict(self)})')
-            time.sleep(10)
-            self.configure()
+            self._reconnect()
 
-    def execute(self, stmt: TextClause, **kwargs) -> Any:
-        if not isinstance(stmt, TextClause):
-            raise TypeError('stmt must be of TextClause type.')
-        result = None
-        attr.validate(self)
+    def _reconnect(self):
+        logging.error(
+            'Failed to connect to database. Trying again in 10 seconds'
+        )
+        logging.debug(f'DB({attr.asdict(self)})')
+        time.sleep(10)
+        self.configure()
+
+    async def exec(self, command, params={}):
         try:
-            result = self._connection.execute(stmt, kwargs)
+            self._connection.execute(command, [params])
         except OperationalError:
-            self.configure()
-            self.execute(stmt)
+            self._reconnect()
+            await self.exec(command, params)
+
+    async def save(self, data: bytes, user: str = 'anonymous') -> None:
+        e = Event(
+            body=data,
+            created_at=datetime.utcnow(),
+            created_by=user
+        )
+        ins = events.insert().values(
+            body=e.body,
+            status=e.status,
+            created_at=e.created_at,
+            created_by=e.created_by
+        )
+        ins.compile().params
+
+        try:
+            logging.debug(f'Saving event: [{e}]')
+            await self.exec(ins)
+            logging.info(f'Event saved.')
+        except OperationalError:
+            self._session.rollback()
+            self._reconnect()
+            raise OperationError('Failed to store event.')
+
+    async def get_oldest_event(self):
+        result = None
+        try:
+            result = self._session.query(events).filter_by(
+                status=False
+            ).order_by('created_at').first()
+        except OperationalError:
+            self._reconnect()
         return result

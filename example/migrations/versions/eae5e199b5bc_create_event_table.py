@@ -6,9 +6,11 @@ Create Date: 2019-10-02 20:32:49.954323
 
 """
 from datetime import datetime
+
 from alembic import op
 
 import sqlalchemy as sa
+from sqlalchemy.schema import CreateSequence, Sequence
 
 
 # revision identifiers, used by Alembic.
@@ -19,15 +21,16 @@ depends_on = None
 
 
 def upgrade():
+    op.execute(CreateSequence(Sequence('id_seq')))
     op.create_table(
         'event',
-        sa.Column('id',
+        sa.Column(
+            'id',
             sa.Integer,
-            primary_key=True,
-            unique=True,
-            autoincrement=True
+            Sequence('id_seq'),
+            primary_key=True
         ),
-        sa.Column('body', sa.Binary, nullable=False),
+        sa.Column('body', sa.LargeBinary, nullable=False),
         sa.Column('created_at',
             sa.DateTime,
             default=datetime.utcnow

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 from contextlib import suppress
@@ -19,7 +20,7 @@ from rabbit.job import echo_job
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.task import Task
-from rabbit.tlog.event_persist import EventPersist
+from rabbit.tlog.db import DB
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -86,11 +87,11 @@ class Subscribe:
             validator=attr.validators.instance_of(Publish)
         )
     )
-    _persist = attr.ib(
-        type=Optional[EventPersist],
+    _db = attr.ib(
+        type=Optional[DB],
         default=None,
         validator=attr.validators.optional(
-            validator=attr.validators.instance_of(EventPersist)
+            validator=attr.validators.instance_of(DB)
         )
     )
 
@@ -152,14 +153,6 @@ class Subscribe:
             queue_name=self.queue.name
         )
 
-    async def _execute(self, data: bytes) -> List[bytes]:
-        process_result = [bytes()]
-        if self.task_type == 'process':
-            process_result = await self.task.process_executor(data)
-            return process_result
-        process_result = await self.task.std_executor(data)
-        return process_result
-
     async def callback(self,
                        channel: Channel,
                        body: bytes,
@@ -167,20 +160,33 @@ class Subscribe:
                        properties: Properties):
         process_result = [bytes()]
         try:
-            process_result = await self._execute(body)
             await self.ack_event(envelope)
+            process_result = await self._execute(body)
+            if self.publish:
+                for result in process_result:
+                    await self.publish.send_event(result)
+            elif self._db:
+                for result in process_result:
+                    created_by = self._get_created_by(body)
+                    await self._db.save(result, created_by)
+            else:
+                return process_result
         except Exception as cause:
             await self.dlx.send_event(cause, body, envelope, properties)
-            await self.reject_event(envelope)
+            # await self.reject_event(envelope)
 
-        if self.publish:
-            for result in process_result:
-                await self.publish.send_event(result)
-        elif self._persist:
-            for result in process_result:
-                self._persist.save(result)
-        else:
+    async def _execute(self, data: bytes) -> List[bytes]:
+        process_result = [bytes()]
+        if self.task_type == 'process':
+            process_result = await self.task.process_executor(data)
             return process_result
+        process_result = await self.task.std_executor(data)
+        logging.info(f'Event successfully processed.')
+        return process_result
+
+    def _get_created_by(self, payload: bytes) -> str:
+        raw_data = json.loads(payload)
+        return str(raw_data.get('createdBy', 'anonymous'))
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         await self.client.channel.basic_client_nack(

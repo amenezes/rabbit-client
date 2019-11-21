@@ -3,15 +3,40 @@ from typing import Optional
 
 import attr
 
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Integer,
+    LargeBinary,
+    MetaData,
+    String,
+    Table
+)
+from sqlalchemy.orm import mapper
+from sqlalchemy.schema import Sequence
 
-@attr.s(slots=True)
+
+metadata = MetaData()
+events = Table(
+    'tipos.event',
+    metadata,
+    Column('body', LargeBinary, nullable=False),
+    Column('id', Integer, Sequence('id_seq'), primary_key=True),
+    Column('created_at', DateTime),
+    Column('created_by', String(100)),
+    Column('status', Boolean)
+)
+
+
+@attr.s
 class Event:
 
     body = attr.ib(
         type=bytes,
         validator=attr.validators.instance_of(bytes)
     )
-    identity = attr.ib(
+    id = attr.ib(
         type=Optional[int],
         default=None,
         validator=attr.validators.optional(
@@ -35,3 +60,6 @@ class Event:
         default=False,
         validator=attr.validators.instance_of(bool)
     )
+
+
+mapper(Event, events)

@@ -7,21 +7,18 @@ from rabbit.tlog.db import DB
 from rabbit.tlog.event import Event
 
 
-class ResponseMock:
-    def first(self):
-        return (1, b'123', False)
-
-
 class DBMock(DB):
     value = False
 
     def __init__(self, value=False):
         self.value = value
 
-    def execute(self, value):
+    async def exec(self, stmt, params={}):
+        pass
+
+    async def get_oldest_event(self):
         if self.value:
-            return ResponseMock()
-        return False
+            return Event(body=b'test')
 
 
 class TestPollingPublisher(asynctest.TestCase):
@@ -29,10 +26,6 @@ class TestPollingPublisher(asynctest.TestCase):
     async def setUp(self):
         self.publish = Publish(client=AioRabbitClient())
         self.polling = PollingPublisher(DB(), self.publish)
-
-    async def test_assemble_event(self):
-        result = await self.polling._assemble_event((1, b'teste', False))
-        self.assertIsInstance(result, Event)
 
     async def test_retrieve_valid_event(self):
         polling = PollingPublisher(

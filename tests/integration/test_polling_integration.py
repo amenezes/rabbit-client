@@ -10,8 +10,12 @@ from rabbit.tlog.db import DB
 
 class TestPollingPublish(asynctest.TestCase):
 
-    async def format_payload(self, event_id, event_body, event_status):
-        return (event_id, event_body, event_status)
+    async def format_payload(self,
+                             event_id,
+                             event_body,
+                             event_created_by,
+                             event_status):
+        return (event_id, event_body, event_created_by, event_status)
 
     async def setUp(self):
         self.raw_body = {
@@ -24,13 +28,3 @@ class TestPollingPublish(asynctest.TestCase):
             DB(),
             Publish(client=AioRabbitClient())
         )
-
-    @asynctest.skip
-    async def test_assemble_event(self):
-        payload = await self.format_payload(1, self.body, False)
-        await self.polling._assemble_event(payload)
-
-    async def test_invalid_assemble_event(self):
-        payload = await self.format_payload(1, self.raw_body, False)
-        with self.assertRaises(TypeError):
-            await self.polling._assemble_event(payload)

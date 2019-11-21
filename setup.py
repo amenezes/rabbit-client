@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="rabbit-client",
-    version="0.2.1",
+    version="0.2.2a4",
     author="alexandre menezes",
     author_email="alexandre.fmenezes@gmail.com",
     description="rabbit message queue client",

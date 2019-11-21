@@ -20,7 +20,7 @@ class TestEvent(unittest.TestCase):
             body=bytes(json.dumps(self.payload), 'utf-8'),
             created_at=self.created_at
         )
-        self.event.identity = 0
+        self.event.id = 0
 
     def test_attributes(self):
         values = [
