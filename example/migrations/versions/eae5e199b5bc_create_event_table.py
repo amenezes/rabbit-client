@@ -10,7 +10,13 @@ from datetime import datetime
 from alembic import op
 
 import sqlalchemy as sa
-from sqlalchemy.schema import CreateSequence, Sequence
+from sqlalchemy.schema import (
+    CreateSchema,
+    CreateSequence,
+    DropSchema,
+    DropSequence,
+    Sequence
+)
 
 
 # revision identifiers, used by Alembic.
@@ -21,7 +27,8 @@ depends_on = None
 
 
 def upgrade():
-    op.execute(CreateSequence(Sequence('id_seq')))
+    op.execute(CreateSchema('tipos')),
+    op.execute(CreateSequence(Sequence(name='id_seq', schema='tipos'))),
     op.create_table(
         'event',
         sa.Column(
@@ -31,14 +38,18 @@ def upgrade():
             primary_key=True
         ),
         sa.Column('body', sa.LargeBinary, nullable=False),
-        sa.Column('created_at',
+        sa.Column(
+            'created_at',
             sa.DateTime,
             default=datetime.utcnow
         ),
         sa.Column('created_by', sa.String(100)),
-        sa.Column('status', sa.Boolean)
+        sa.Column('status', sa.Boolean),
+        schema='tipos'
     )
 
 
 def downgrade():
-    op.drop_table('event')
+    op.drop_table('event', schema='tipos')
+    op.execute(DropSequence(Sequence(name='id_seq', schema='tipos')))
+    op.execute(DropSchema('tipos'))

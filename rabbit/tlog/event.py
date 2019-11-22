@@ -17,15 +17,16 @@ from sqlalchemy.orm import mapper
 from sqlalchemy.schema import Sequence
 
 
-metadata = MetaData()
+metadata = MetaData(schema='tipos')
 events = Table(
-    'tipos.event',
+    'event',
     metadata,
     Column('body', LargeBinary, nullable=False),
-    Column('id', Integer, Sequence('id_seq'), primary_key=True),
+    Column('id', Integer, Sequence(name='id_seq', schema='tipos'), primary_key=True),
     Column('created_at', DateTime),
     Column('created_by', String(100)),
-    Column('status', Boolean)
+    Column('status', Boolean),
+    schema='tipos'
 )
 
 
