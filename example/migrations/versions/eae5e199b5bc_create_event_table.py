@@ -5,9 +5,11 @@ Revises:
 Create Date: 2019-10-02 20:32:49.954323
 
 """
+import os
 from datetime import datetime
 
 from alembic import op
+from alembic import context
 
 import sqlalchemy as sa
 from sqlalchemy.schema import (
@@ -25,10 +27,22 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+config = context.config
+url = config.get_main_option("sqlalchemy.url")
+
 
 def upgrade():
-    op.execute(CreateSchema('tipos')),
-    op.execute(CreateSequence(Sequence(name='id_seq', schema='tipos'))),
+    # if url.lower().startswith('postgres'):
+    #     op.execute(CreateSchema(str(os.getenv('EVENT_SCHEMA', 'my_schema'))))
+    op.execute(CreateSchema(str(os.getenv('EVENT_SCHEMA', 'my_schema'))))
+    op.execute(
+        CreateSequence(
+            Sequence(
+                name='id_seq',
+                schema=str(os.getenv('EVENT_SCHEMA', 'my_schema'))
+            )
+        )
+    ),
     op.create_table(
         'event',
         sa.Column(
@@ -45,11 +59,21 @@ def upgrade():
         ),
         sa.Column('created_by', sa.String(100)),
         sa.Column('status', sa.Boolean),
-        schema='tipos'
+        schema=str(os.getenv('EVENT_SCHEMA', 'my_schema'))
     )
 
 
 def downgrade():
-    op.drop_table('event', schema='tipos')
-    op.execute(DropSequence(Sequence(name='id_seq', schema='tipos')))
-    op.execute(DropSchema('tipos'))
+    op.drop_table(
+        'event',
+        schema=str(os.getenv('EVENT_SCHEMA', 'my_schema'))
+    )
+    op.execute(DropSequence(
+        Sequence(
+            name='id_seq',
+            schema=str(os.getenv('EVENT_SCHEMA', 'my_schema'))
+        )
+    ))
+    # if url.lower().startswith('postgres'):
+    #     op.execute(DropSchema(str(os.getenv('EVENT_SCHEMA', 'my_schema'))))
+    op.execute(DropSchema(str(os.getenv('EVENT_SCHEMA', 'my_schema'))))
