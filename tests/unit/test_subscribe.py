@@ -1,4 +1,5 @@
 import asyncio
+import types
 
 import asynctest
 
@@ -24,7 +25,7 @@ class TestSubscribe(asynctest.TestCase):
             task_type='process'
         )
         result = await subscribe._execute(self.payload)
-        self.assertIsInstance(result, list)
+        self.assertIsInstance(result, types.GeneratorType)
 
     async def test_execute_method(self):
         result = await self.subscribe._execute(self.payload)

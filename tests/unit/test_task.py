@@ -1,4 +1,5 @@
 import asyncio
+import types
 
 import asynctest
 
@@ -23,7 +24,7 @@ class TestTask(asynctest.TestCase):
             job=echo_job
         )
         result = await task.process_executor(self.payload)
-        self.assertIsInstance(result, list)
+        self.assertIsInstance(result, types.GeneratorType)
 
     async def test_std_executor_coroutine(self):
         task = Task(job=async_echo_job)

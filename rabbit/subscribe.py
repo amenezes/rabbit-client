@@ -173,7 +173,6 @@ class Subscribe:
                 return process_result
         except Exception as cause:
             await self.dlx.send_event(cause, body, envelope, properties)
-            # await self.reject_event(envelope)
 
     async def _execute(self, data: bytes) -> List[bytes]:
         process_result = [bytes()]

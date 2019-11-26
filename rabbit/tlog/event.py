@@ -19,7 +19,7 @@ from sqlalchemy.schema import Sequence
 
 metadata = MetaData()
 events = Table(
-    'tipos.event',
+    'event',
     metadata,
     Column('body', LargeBinary, nullable=False),
     Column('id', Integer, Sequence('id_seq'), primary_key=True),

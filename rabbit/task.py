@@ -42,8 +42,7 @@ class Task:
             )
         ]
         completed, *_ = await asyncio.wait(task)
-        results = [t.result() for t in completed]
-        return results
+        return (t.result() for t in completed)
 
     async def std_executor(self, *args, **kwargs):
         logging.debug('Starting StandardExecutor...')
