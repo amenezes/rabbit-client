@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Optional
 
@@ -17,15 +18,24 @@ from sqlalchemy.orm import mapper
 from sqlalchemy.schema import Sequence
 
 
-metadata = MetaData()
+metadata = MetaData(schema=str(os.getenv('EVENT_SCHEMA', 'my_schema')))
 events = Table(
     'event',
     metadata,
     Column('body', LargeBinary, nullable=False),
-    Column('id', Integer, Sequence('id_seq'), primary_key=True),
+    Column(
+        'id',
+        Integer,
+        Sequence(
+            name='id_seq',
+            schema=str(os.getenv('EVENT_SCHEMA', 'my_schema'))
+        ),
+        primary_key=True
+    ),
     Column('created_at', DateTime),
     Column('created_by', String(100)),
-    Column('status', Boolean)
+    Column('status', Boolean),
+    schema=str(os.getenv('EVENT_SCHEMA', 'my_schema'))
 )
 
 

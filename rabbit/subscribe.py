@@ -176,8 +176,10 @@ class Subscribe:
 
     async def _execute(self, data: bytes) -> List[bytes]:
         process_result = [bytes()]
+        logging.info(f'Initializing event processing...')
         if self.task_type == 'process':
             process_result = await self.task.process_executor(data)
+            logging.info(f'Event successfully processed.')
             return process_result
         process_result = await self.task.std_executor(data)
         logging.info(f'Event successfully processed.')
