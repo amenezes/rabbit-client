@@ -1,32 +1,92 @@
-import asyncio
 import types
 
-import asynctest
+import pytest
 
-from rabbit.client import AioRabbitClient
-from rabbit.job import echo_job
-from rabbit.subscribe import Subscribe
-from rabbit.task import Task
+from conftest import ChannelMock, EnvelopeMock, PropertiesMock
+
+PAYLOAD = b'{"a": 1}'
 
 
-class TestSubscribe(asynctest.TestCase):
+@pytest.mark.asyncio
+async def test_subscribe_execute_task_process(subscribe_with_process_job):
+    subscribe = subscribe_with_process_job
+    result = await subscribe._execute(PAYLOAD)
+    assert isinstance(result, types.GeneratorType)
 
-    async def setUp(self):
-        self.subscribe = Subscribe(client=AioRabbitClient())
-        self.payload = b'{"a": 1}'
 
-    async def test_execute_process(self):
-        subscribe = Subscribe(
-            client=AioRabbitClient(),
-            task=Task(
-                app=asyncio.get_event_loop(),
-                job=echo_job
-            ),
-            task_type='process'
-        )
-        result = await subscribe._execute(self.payload)
-        self.assertIsInstance(result, types.GeneratorType)
+@pytest.mark.asyncio
+async def test_subscribe_execute_task_standard(subscribe_with_standard_job):
+    subscribe = subscribe_with_standard_job
+    result = await subscribe._execute(PAYLOAD)
+    assert isinstance(result, list)
 
-    async def test_execute_method(self):
-        result = await self.subscribe._execute(self.payload)
-        self.assertIsInstance(result, list)
+
+@pytest.mark.asyncio
+async def test_configure(subscribe_mock):
+    await subscribe_mock.configure()
+
+
+@pytest.mark.asyncio
+async def test_configure_with_dlx(subscribe_dlx):
+    await subscribe_dlx.configure()
+
+
+@pytest.mark.asyncio
+async def test_configure_publish(subscribe_all):
+    await subscribe_all._configure_publish()
+
+
+@pytest.mark.asyncio
+async def test_configure_exchange(subscribe_mock):
+    await subscribe_mock._configure_exchange()
+
+
+@pytest.mark.asyncio
+async def test_configure_queue(subscribe_mock):
+    await subscribe_mock._configure_queue()
+
+
+@pytest.mark.asyncio
+async def test_configure_queue_bind(subscribe_mock):
+    await subscribe_mock._configure_queue_bind()
+
+
+@pytest.mark.asyncio
+async def test_execute_task(subscribe_mock):
+    result = await subscribe_mock._execute(b"123")
+    assert result is not None
+
+
+def test_get_created_by(subscribe_mock):
+    result = subscribe_mock._get_created_by(b'{"key": "value"}')
+    assert result is not None
+
+
+@pytest.mark.asyncio
+async def test_reject_event(subscribe_mock):
+    await subscribe_mock.reject_event(EnvelopeMock())
+
+
+@pytest.mark.asyncio
+async def test_ack_event(subscribe_mock):
+    await subscribe_mock.ack_event(EnvelopeMock())
+
+
+def test_subscribe_with_dlx(dlx, subscribe_dlx):
+    assert subscribe_dlx.dlx is not None
+
+
+@pytest.mark.asyncio
+async def test_callback(subscribe_mock):
+    result = await subscribe_mock.callback(
+        ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
+    )
+    assert result == [b'{"key": "value"}']
+
+
+@pytest.mark.asyncio
+async def test_callback_with_publish(subscribe_all):
+    result = await subscribe_all.callback(
+        ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
+    )
+    assert result is None

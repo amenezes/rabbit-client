@@ -1,42 +1,38 @@
-import asyncio
+import sys
 import types
 
-import asynctest
+import pytest
 
-from rabbit.job import async_echo_job, echo_job
-from rabbit.task import Task
+from rabbit import async_echo_job
+from rabbit.task import ProcessTask, StandardTask
+
+PAYLOAD = b'{"document": 1, "description": "123", "documentSearchable": null, "pages": [{"body": "abc 123", "number": 1}, {"body": "def 456", "number": 2}, {"body": "ghi 789", "number": 3}]}'
 
 
-class TestTask(asynctest.TestCase):
+@pytest.mark.asyncio
+async def test_process_executor(process_task):
+    result = await process_task.execute(PAYLOAD)
+    assert isinstance(result, types.GeneratorType)
 
-    async def setUp(self):
-        self.task = Task()
-        self.payload = b'{"document": 1, "description": "123", "documentSearchable": null, "pages": [{"body": "abc 123", "number": 1}, {"body": "def 456", "number": 2}, {"body": "ghi 789", "number": 3}]}'
 
-    async def test_calling_invalid_job(self):
-        custom_task = Task(job=None)
-        with self.assertRaises(TypeError):
-            await custom_task.process_executor()
+@pytest.mark.asyncio
+async def test_standardtask(standard_task):
+    result = await standard_task.execute(PAYLOAD)
+    assert isinstance(result, list)
 
-    async def test_process_executor(self):
-        task = Task(
-            app=asyncio.get_event_loop(),
-            job=echo_job
-        )
-        result = await task.process_executor(self.payload)
-        self.assertIsInstance(result, types.GeneratorType)
 
-    async def test_std_executor_coroutine(self):
-        task = Task(job=async_echo_job)
-        result = await task.std_executor(self.payload)
-        self.assertIsInstance(result, list)
+@pytest.mark.asyncio
+async def test_standardtask_with_coro():
+    standard_task = StandardTask(async_echo_job)
+    result = await standard_task.execute(PAYLOAD)
+    assert isinstance(result, list)
 
-    async def test_std_executor_blocking_method(self):
-        task = Task(job=echo_job)
-        result = await task.std_executor(self.payload)
-        self.assertIsInstance(result, list)
 
-    async def test_invalid_std_executor(self):
-        task = Task(job=None)
-        with self.assertRaises(TypeError):
-            await task.std_executor(self.payload)
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.version_info > (3, 6), reason="loop dosen't work property in tests on python3.6"
+)
+async def test_processtask_with_coro(loop):
+    process_task = ProcessTask(async_echo_job, loop=loop)
+    result = await process_task.execute(PAYLOAD)
+    assert isinstance(result, types.GeneratorType)

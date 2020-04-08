@@ -1,35 +1,25 @@
 import json
-import unittest
 from datetime import datetime
 
 import attr
+import pytest
 
-from rabbit.tlog.event import Event
+from rabbit.tlog import Event
+
+CREATED_AT = datetime.utcnow()
+PAYLOAD = {
+    "paginas": ["abcd", "123"],
+    "documento": 123,
+    "descricao": "abc",
+}
 
 
-class TestEvent(unittest.TestCase):
+@pytest.fixture
+def event():
+    return Event(body=bytes(json.dumps(PAYLOAD), "utf-8"), created_at=CREATED_AT)
 
-    def setUp(self):
-        self.payload = {
-            'paginas': [{'corpo': 'abcd123'}],
-            'documento': 123,
-            'descricao': 'abc'
-        }
-        self.created_at = datetime.utcnow()
-        self.event = Event(
-            body=bytes(json.dumps(self.payload), 'utf-8'),
-            created_at=self.created_at
-        )
-        self.event.id = 0
 
-    def test_attributes(self):
-        values = [
-            bytes(json.dumps(self.payload), 'utf-8'),
-            self.created_at
-        ]
-        for value in values:
-            with self.subTest(value=value):
-                self.assertIn(
-                    value,
-                    attr.asdict(self.event).values()
-                )
+def test_attributes(event):
+    values = [bytes(json.dumps(PAYLOAD), "utf-8"), CREATED_AT]
+    for value in values:
+        assert value in attr.asdict(event).values()

@@ -1,7 +1,9 @@
 import logging
+from contextlib import suppress
 
 import attr
 
+from rabbit import loop
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
@@ -10,9 +12,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 class Observer:
 
     _observers = attr.ib(
-        type=list,
-        default=[],
-        validator=attr.validators.instance_of(list)
+        type=list, factory=list, validator=attr.validators.instance_of(list)
     )
 
     def attach(self, observer) -> None:
@@ -20,13 +20,23 @@ class Observer:
             self._observers.append(observer)
 
     def detach(self, observer) -> None:
-        try:
+        with suppress(ValueError):
             self._observers.remove(observer)
-        except ValueError:
-            pass
 
-    def notify(self, loop, modifier=None) -> None:
+    def notify(self, modifier=None) -> None:
         for observer in self._observers:
             if modifier != observer:
-                logging.debug(f'{observer.__class__} notified')
-                loop.create_task(observer.configure())
+                logging.debug(f"{observer.__class__} notified")
+                loop().create_task(observer.configure())
+
+    def __len__(self):
+        return len(self._observers)
+
+    def __contains__(self, value):
+        if value in (self._observers):
+            return True
+        return False
+
+    @property
+    def observers(self):
+        return self._observers

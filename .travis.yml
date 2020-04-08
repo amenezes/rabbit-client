@@ -5,22 +5,11 @@ services:
 python:
   - 3.6
   - 3.7
-  # - 3.8
+  - 3.8
+env:
+  - SKIP_STYLE=1
 install:
   - pip install docker-compose
   - pip install -r requirements-dev.txt
 script:
-  - make lint  # execute flake8 and mypy
-  - make tests # execute unit and integration tests
-  - make ci    # publishes tests reports
-before_deploy:
-  - make docs  # generate project documentation
-deploy:
-  provider: s3
-  access_key_id: $S3_ACCESS_KEY
-  secret_access_key: $S3_ACCESS_SECRET_KEY
-  bucket: $BUCKET
-  skip_cleanup: true
-  local_dir: site
-  on:
-    branch: master
+  - make ci

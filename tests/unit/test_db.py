@@ -1,23 +1,26 @@
-import json
-
-import asynctest
-
-from rabbit.tlog.db import DB
+PAYLOAD = {"paginas": ["ABC", "123"], "documento": 123, "descricao": "abc"}
 
 
-class TestDB(asynctest.TestCase):
+class EngineMock:
+    def connect(self, *args, **kwargs):
+        pass
 
-    def format_payload(self, payload):
-        return bytes(json.dumps(payload), 'utf-8')
 
-    def setUp(self):
-        self.payload = {
-            'paginas': [{'corpo': 'abcd123'}],
-            'documento': 123,
-            'descricao': 'abc'
-        }
-        self.db = DB()
+def create_engine_mock(*args, **kwargs):
+    return EngineMock()
 
-    async def test_save(self):
-        data = self.format_payload(self.payload)
-        await self.db.save(data)
+
+def test_configure(monkeypatch):
+    pass
+
+
+def test_exec():
+    pass
+
+
+def test_save():
+    pass
+
+
+def test_get_oldest_event():
+    pass

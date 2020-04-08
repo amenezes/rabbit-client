@@ -1,17 +1,26 @@
-import asynctest
-
-from rabbit.client import AioRabbitClient
-from rabbit.publish import Publish
+import pytest
 
 
-class TestPublish(asynctest.TestCase):
+@pytest.mark.asyncio
+async def test_configure(publish_mock):
+    await publish_mock.configure()
 
-    async def setUp(self):
-        self.publish = Publish(client=AioRabbitClient())
 
-    async def test_set_client_property(self):
-        self.publish.client = AioRabbitClient()
+@pytest.mark.asyncio
+async def test_configure_exchange(publish_mock):
+    await publish_mock._configure_exchange()
 
-    async def test_set_invalid_client_property(self):
-        with self.assertRaises(ValueError):
-            self.publish.client = None
+
+@pytest.mark.asyncio
+async def test_configure_queue(publish_mock):
+    await publish_mock._configure_queue()
+
+
+@pytest.mark.asyncio
+async def test_configure_queue_bind(publish_mock):
+    await publish_mock._configure_queue_bind()
+
+
+@pytest.mark.asyncio
+async def test_send_event(publish_mock):
+    await publish_mock.send_event(123)
