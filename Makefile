@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := about
 VERSION := $(shell cat rabbit/__version__.py | cut -d'"' -f 2)
-SKIP_STYLE=0
+SKIP_STYLE := $(shell printenv SKIP_STYLE | wc -l)
 
 lint:
 ifeq ($(SKIP_STYLE), 0)

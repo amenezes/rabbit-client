@@ -14,3 +14,5 @@ mypy
 tox==3.14.6
 tox-asdf==0.1.0
 psycopg2-binary==2.8.4
+# command-line
+cleo==0.8.0

@@ -9,7 +9,6 @@ python:
 env:
   - SKIP_STYLE=1
 install:
-  - pip install docker-compose
   - pip install -r requirements-dev.txt
 script:
   - make ci
