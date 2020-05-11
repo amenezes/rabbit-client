@@ -7,10 +7,6 @@ from rabbit.exchange import Exchange
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 
-PAYLOAD = json.dumps(
-    {"document": 1, "description": "123", "pages": ["abc 123", "def 456", "ghi 789"]}
-)
-
 
 class Producer:
     def __init__(self, loop=None, client=None, qtd=1):
@@ -32,12 +28,12 @@ class Producer:
         self.loop.run_until_complete(publish.configure())
         return publish
 
-    def send_event(self):
+    def send_event(self, data):
         publish = self.configure_publish()
         for i in range(0, self.qtd):
             self.loop.run_until_complete(
                 publish.send_event(
-                    bytes(PAYLOAD, "utf-8")
+                    bytes(data, "utf-8")
                     # properties={'headers': {'x-delay': 5000}}
                 )
             )

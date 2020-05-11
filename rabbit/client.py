@@ -26,6 +26,16 @@ class AioRabbitClient:
         default=int(os.getenv("BROKER_PORT", 5672)),
         validator=attr.validators.instance_of(int),
     )
+    username = attr.ib(
+        type=str,
+        default=os.getenv("BROKER_USERNAME", "guest"),
+        validator=attr.validators.instance_of(str),
+    )
+    password = attr.ib(
+        type=str,
+        default=os.getenv("BROKER_PASSWORD", "guest"),
+        validator=attr.validators.instance_of(str),
+    )
     _observer = attr.ib(type=Observer, factory=Observer, init=False)
     _channel = attr.ib(init=False, default=None)
     protocol = attr.ib(init=False, default=None)
@@ -50,7 +60,12 @@ class AioRabbitClient:
 
     async def connect(self, channel_max: int = 1, **kwargs) -> None:
         self.transport, self.protocol = await aioamqp.connect(
-            host=self.host, port=self.port, channel_max=channel_max, **kwargs
+            host=self.host,
+            port=self.port,
+            login=self.username,
+            password=self.password,
+            channel_max=channel_max,
+            **kwargs,
         )
         await self._configure_channel()
 

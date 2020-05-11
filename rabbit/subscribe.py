@@ -126,6 +126,7 @@ class Subscribe:
         except Exception as cause:
             if self.dlx:
                 await self.dlx.send_event(cause, body, envelope, properties)
+            logging.error(cause)
 
     async def _execute(self, data: bytes) -> Any:
         logging.info(f"Initializing event processing...")
