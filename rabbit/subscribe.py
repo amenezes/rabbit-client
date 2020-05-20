@@ -129,9 +129,9 @@ class Subscribe:
             logging.error(cause)
 
     async def _execute(self, data: bytes) -> Any:
-        logging.info(f"Initializing event processing...")
+        logging.debug(f"Initializing event processing...")
         result = await self.task.execute(data)
-        logging.info(f"Event successfully processed.")
+        logging.debug(f"Event successfully processed.")
         return result
 
     def _get_created_by(self, payload: bytes) -> str:
