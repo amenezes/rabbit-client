@@ -1,8 +1,8 @@
 import pytest
 
 from conftest import AioRabbitClientMock, EnvelopeMock, PropertiesMock
-from rabbit import AttributeNotInitialized
 from rabbit.dlx import DLX
+from rabbit.exceptions import AttributeNotInitialized
 
 
 @pytest.mark.asyncio

@@ -1,11 +1,8 @@
-import logging
 from contextlib import suppress
 
 import attr
 
-from rabbit import loop
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+from rabbit import logger, loop
 
 
 @attr.s(slots=True, frozen=True)
@@ -26,10 +23,10 @@ class Observer:
     def notify(self, modifier=None) -> None:
         for observer in self._observers:
             if modifier != observer:
-                logging.debug(f"{observer.__class__} notified")
+                logger.debug(f"{observer.__class__} notified")
                 loop().create_task(observer.configure())
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._observers)
 
     def __contains__(self, value):

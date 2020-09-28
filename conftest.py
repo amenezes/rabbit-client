@@ -1,11 +1,9 @@
-import asyncio
-
 import pytest
 
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
-from rabbit import async_echo_job, echo_job
+from rabbit.job import async_echo_job
 from rabbit.client import AioRabbitClient
 from rabbit.subscribe import Subscribe
 from rabbit.publish import Publish
@@ -17,7 +15,6 @@ from rabbit.tlog.db import DB
 from rabbit.tlog.migration import Migration
 from rabbit.dlx import DLX
 from rabbit.tlog import Event
-from rabbit.task import ProcessTask, StandardTask
 
 
 class AioRabbitClientMock(AioRabbitClient):
@@ -140,21 +137,6 @@ class EnvelopeMock(Envelope):
         return True
 
 
-@pytest.mark.asyncio
-@pytest.fixture
-async def loop():
-    try:
-        loop = asyncio.get_running_loop()
-    except AttributeError:
-        loop = asyncio._get_running_loop()
-    return loop
-
-
-# @pytest.fixture
-# def subscribe_mock():
-#     return SubscribeMock()
-
-
 @pytest.fixture
 def client():
     return AioRabbitClient()
@@ -163,26 +145,6 @@ def client():
 @pytest.fixture
 async def subscribe(client):
     return Subscribe(client=client)
-
-
-@pytest.fixture
-async def subscribe_with_process_job(client):
-    return Subscribe(client=client, task=ProcessTask())
-
-
-@pytest.fixture
-async def subscribe_with_standard_job(client):
-    return Subscribe(client=client, task=StandardTask())
-
-
-@pytest.fixture
-async def process_task():
-    return ProcessTask(job=async_echo_job)
-
-
-@pytest.fixture
-async def standard_task():
-    return StandardTask(job=echo_job)
 
 
 @pytest.fixture
@@ -205,11 +167,6 @@ def exchange():
     return Exchange(name="exchange", exchange_type="topic", topic="#")
 
 
-# @pytest.fixture
-# def db():
-#     return DB(migration=MigrationMock())
-
-
 @pytest.fixture
 def polling_mock(publish_mock):
     return PollingPublisher(publish_mock, DBMock())
@@ -222,15 +179,15 @@ def dlx(client):
 
 @pytest.fixture
 @pytest.mark.asyncio
-async def publish_mock(loop):
-    return Publish(AioRabbitClientMock(app=loop))
+async def publish_mock():
+    return Publish(AioRabbitClientMock())
 
 
 @pytest.fixture
 def subscribe_mock():
     return Subscribe(
         client=AioRabbitClientMock(),
-        task=StandardTask()
+        task=async_echo_job
     )
 
 
@@ -238,15 +195,16 @@ def subscribe_mock():
 def subscribe_dlx(dlx):
     return Subscribe(
         client=AioRabbitClientMock(),
-        task=StandardTask(),
+        task=async_echo_job,
         dlx=dlx
     )
+
 
 @pytest.fixture
 def subscribe_all(dlx, publish_mock):
     return Subscribe(
         client=AioRabbitClientMock(),
-        task=StandardTask(),
+        task=async_echo_job,
         dlx=dlx,
         publish=publish_mock
     )

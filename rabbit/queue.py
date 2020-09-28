@@ -1,7 +1,7 @@
 import attr
 
 
-@attr.s(slots=True, frozen=True)
+@attr.s(frozen=True)
 class Queue:
 
     name = attr.ib(type=str, validator=attr.validators.instance_of(str))

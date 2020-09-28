@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 from typing import Dict
 
@@ -7,12 +6,11 @@ import attr
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
-from rabbit import OperationError
+from rabbit import logger
 from rabbit.client import AioRabbitClient
+from rabbit.exceptions import OperationError
 from rabbit.exchange import Exchange
 from rabbit.queue import Queue
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 @attr.s(slots=True)
@@ -93,10 +91,9 @@ class DLX:
         timeout = await self._get_timeout(properties.headers)
         properties = await self._get_properties(timeout, cause, envelope)
 
-        logging.error(f"Error to process event: {cause}")
-        logging.debug(f"timeout: {timeout}")
-        logging.debug(
-            f"send event to dlq: [exchange: {self.exchange.name}"
+        logger.debug(f"Timeout: {timeout}")
+        logger.debug(
+            f"Send event to dlq: [exchange: {self.exchange.name}"
             f" | queue: {self.queue.name} | properties: {properties}]"
         )
         try:

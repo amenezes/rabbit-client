@@ -1,4 +1,16 @@
+import asyncio
+
 import pytest
+
+
+@pytest.mark.asyncio
+@pytest.fixture
+async def loop():
+    try:
+        loop = asyncio.get_running_loop()
+    except AttributeError:
+        loop = asyncio._get_running_loop()
+    return loop
 
 
 class MockObject:

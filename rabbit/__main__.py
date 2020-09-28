@@ -1,11 +1,13 @@
+import logging
 import os
+import sys
 
 from cleo import Application, Command
 
 from rabbit import __version__
-from rabbit.cli.consumer import Consumer
-from rabbit.cli.producer import Producer
-from rabbit.cli.pubsub import PubSub
+from rabbit.cli import Consumer, Producer, PubSub
+
+logging.basicConfig(level=logging.INFO)
 
 
 class PollingPublisherCommand(Command):
@@ -47,6 +49,7 @@ class EventCommand(Command):
     Send a sample message 📨 to Consumer or PollingPublisher
 
     send-event
+        {payload : payload file in json format.}
         {--e|events=1 : events to send.}
     """
 
@@ -58,11 +61,17 @@ class EventCommand(Command):
             f"subscribe: {os.getenv('SUBSCRIBE_QUEUE', 'default.subscribe.queue')}]</>"
         )
         try:
-            prod = Producer(qtd=int(self.option("events")))
+            with open(f"{self.argument('payload')}", "rb") as f:
+                payload = f.read()
+        except FileNotFoundError:
+            self.line(f"<error>File not found: {self.argument('payload')}</error>")
+            sys.exit(1)
+        try:
+            prod = Producer(payload, qtd=int(self.option("events")))
             prod.send_event()
             self.line(f"<info>!></info> <options=bold>event successfully submitted!</>")
         except OSError:
-            self.line("<error>Failure to connect in rabbit.</error>")
+            self.line("<error>Failure to connect to RabbitMQ.</error>")
 
 
 application = Application("rabbit-client", f"{__version__}")

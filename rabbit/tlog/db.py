@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 from datetime import datetime
@@ -8,10 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-from rabbit import OperationError
+from rabbit import logger
+from rabbit.exceptions import OperationError
 from rabbit.tlog import Event, Migration, events
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 @attr.s(slots=True)
@@ -63,20 +61,18 @@ class DB:
     def script_location(self):
         return self._migration.script_location
 
-    def configure(self) -> None:
-        self._engine = create_engine(self.driver, pool_pre_ping=True)
+    def configure(self, **kwargs) -> None:
+        self._engine = create_engine(self.driver, pool_pre_ping=True, **kwargs)
         Session = sessionmaker(bind=self._engine)
         self._session = Session()
-
-        self._connection = self._engine.connect()
         try:
             self._connection = self._engine.connect()
         except Exception:
             self._reconnect()
 
     def _reconnect(self):
-        logging.error("Failed to connect to database. Trying again in 10 seconds")
-        logging.debug(f"DB({attr.asdict(self)})")
+        logger.error("Failed to connect to database. Trying again in 10 seconds")
+        logger.debug(f"DB({attr.asdict(self)})")
         time.sleep(10)
         self.configure()
 
@@ -98,9 +94,9 @@ class DB:
         ins.compile().params
 
         try:
-            logging.debug(f"Saving event: [{e}]")
+            logger.debug(f"Saving event: [{e}]")
             await self.exec(ins)
-            logging.info(f"Event saved.")
+            logger.info(f"Event saved.")
         except OperationalError:
             self._session.rollback()
             self._reconnect()

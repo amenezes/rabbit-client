@@ -6,9 +6,7 @@ python:
   - 3.6
   - 3.7
   - 3.8
-env:
-  - SKIP_STYLE=1
 install:
   - pip install -r requirements-dev.txt
 script:
-  - make ci
+  - make ci SKIP_STYLE=true

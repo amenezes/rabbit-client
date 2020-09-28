@@ -1,9 +1,8 @@
 import asyncio
 import json
-import logging
 import os
 from contextlib import suppress
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import attr
 from aioamqp.channel import Channel
@@ -11,16 +10,14 @@ from aioamqp.envelope import Envelope
 from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 
-from rabbit import AttributeNotInitialized
+from rabbit import logger
 from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
+from rabbit.exceptions import AttributeNotInitialized
 from rabbit.exchange import Exchange
 from rabbit.publish import Publish
 from rabbit.queue import Queue
-from rabbit.task import Task
 from rabbit.tlog.db import DB
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 @attr.s(slots=True)
@@ -29,7 +26,7 @@ class Subscribe:
     client = attr.ib(
         type=AioRabbitClient, validator=attr.validators.instance_of(AioRabbitClient)
     )
-    task = attr.ib(type=Task, validator=attr.validators.instance_of(Task))
+    task = attr.ib(type=Callable, validator=attr.validators.is_callable())
     exchange = attr.ib(
         type=Exchange,
         default=Exchange(
@@ -68,8 +65,8 @@ class Subscribe:
             self.dlx = DLX(self.client)
 
     async def configure(self) -> None:
+        await asyncio.sleep(5)
         with suppress(SynchronizationError):
-            await asyncio.sleep(5)
             try:
                 if self.dlx:
                     await self.dlx.configure()
@@ -78,7 +75,7 @@ class Subscribe:
                 await self._configure_publish()
                 await self._configure_queue_bind()
             except AttributeNotInitialized:
-                logging.debug("Waiting client initialization...SUBSCRIBE")
+                logger.debug("Waiting client initialization...SUBSCRIBE")
 
     async def _configure_publish(self) -> None:
         if self._publish:
@@ -109,30 +106,27 @@ class Subscribe:
 
     async def callback(
         self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties
-    ):
-        process_result = [bytes()]
+    ) -> Optional[Any]:
+        result = None
         try:
             await self.ack_event(envelope)
-            process_result = await self._execute(body)
+            result = await self.task(body)
             if self._publish:
-                for result in process_result:
-                    await self._publish.send_event(result)
+                await self._send_event(result)
             elif self._db:
-                for result in process_result:
-                    created_by = self._get_created_by(body)
-                    await self._db.save(result, created_by)
-            else:
-                return process_result
+                created_by = self._get_created_by(body)
+                await self._db.save(result, created_by)
         except Exception as cause:
+            logger.error(cause)
             if self.dlx:
                 await self.dlx.send_event(cause, body, envelope, properties)
-            logging.error(cause)
-
-    async def _execute(self, data: bytes) -> Any:
-        logging.debug(f"Initializing event processing...")
-        result = await self.task.execute(data)
-        logging.debug(f"Event successfully processed.")
         return result
+
+    async def _send_event(self, data):
+        try:
+            await self._publish.send_event(bytes(json.dumps(data), "utf-8"))
+        except TypeError:
+            await self._publish.send_event(data)
 
     def _get_created_by(self, payload: bytes) -> str:
         raw_data = json.loads(payload)

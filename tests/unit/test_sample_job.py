@@ -1,13 +1,8 @@
 import pytest
 
-from rabbit import async_echo_job, echo_job
+from rabbit.job import async_echo_job
 
 PAYLOAD = b'{"mykey": 123}'
-
-
-def test_sample_echo_job():
-    response = echo_job(PAYLOAD)
-    assert isinstance(response, bytes)
 
 
 @pytest.mark.asyncio

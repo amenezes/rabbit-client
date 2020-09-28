@@ -1,9 +1,10 @@
 import asyncio
-
-from rabbit.exceptions import AttributeNotInitialized, OperationError
-from rabbit.job import async_echo_job, echo_job
+import logging
 
 from .__version__ import __version__
+
+logger = logging.getLogger("rabbit-client")
+logger.addHandler(logging.NullHandler())
 
 
 def loop():
@@ -12,4 +13,4 @@ def loop():
     except AttributeError:
         return asyncio._get_running_loop()
     except Exception:
-        raise RuntimeError("no running event loop")
+        raise RuntimeError("No running event loop")

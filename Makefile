@@ -1,9 +1,8 @@
 .DEFAULT_GOAL := about
 VERSION := $(shell cat rabbit/__version__.py | cut -d'"' -f 2)
-SKIP_STYLE := $(shell printenv SKIP_STYLE | wc -l)
 
 lint:
-ifeq ($(SKIP_STYLE), 0)
+ifeq ($(SKIP_STYLE), )
 	@echo "> running isort..."
 	isort -rc rabbit/
 	isort -rc tests/
@@ -45,7 +44,7 @@ about:
 	@echo "mailto: alexandre.fmenezes@gmail.com"
 
 ci: lint tests
-ifeq ($(CI), true)
+ifeq ($(TRAVIS_PULL_REQUEST), false)
 	@echo "> download CI dependencies"
 	curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
 	chmod +x ./cc-test-reporter
@@ -55,6 +54,6 @@ ifeq ($(CI), true)
 	./cc-test-reporter upload-coverage -i codeclimate.json -r $$CC_TEST_REPORTER_ID
 endif
 
-all: install-deps ci docs
+all: install-deps ci tox docs
 
 .PHONY: install-deps lint tests docs tox ci all

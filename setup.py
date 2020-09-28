@@ -12,7 +12,7 @@ setuptools.setup(
     version=f"{__version__}",
     author="alexandre menezes",
     author_email="alexandre.fmenezes@gmail.com",
-    description="rabbit message queue client",
+    description="async rabbit client",
     long_description=long_description,
     long_description_content_type="text/markdown",
     license='Apache-2.0',

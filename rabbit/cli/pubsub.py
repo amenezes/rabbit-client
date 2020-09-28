@@ -2,10 +2,10 @@ import asyncio
 import logging
 
 from rabbit.client import AioRabbitClient
+from rabbit.job import async_echo_job
 from rabbit.polling import PollingPublisher
 from rabbit.publish import Publish
 from rabbit.subscribe import Subscribe
-from rabbit.task import ProcessTask
 from rabbit.tlog.db import DB
 
 
@@ -17,7 +17,7 @@ class PubSub:
     def init_consumer(self):
         subscribe_client = AioRabbitClient()
         self.loop.create_task(subscribe_client.persistent_connect())
-        return Subscribe(client=subscribe_client, db=DB(), task=ProcessTask())
+        return Subscribe(client=subscribe_client, db=DB(), task=async_echo_job)
 
     def init_polling_publisher(self):
         polling_client = AioRabbitClient()
