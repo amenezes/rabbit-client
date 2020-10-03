@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 from contextlib import suppress
 from typing import Any, Callable, Optional
@@ -15,12 +14,10 @@ from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
 from rabbit.exceptions import AttributeNotInitialized
 from rabbit.exchange import Exchange
-from rabbit.publish import Publish
 from rabbit.queue import Queue
-from rabbit.tlog.db import DB
 
 
-@attr.s(slots=True)
+@attr.s
 class Subscribe:
 
     client = attr.ib(
@@ -46,17 +43,10 @@ class Subscribe:
         default=None,
         validator=attr.validators.optional(validator=attr.validators.instance_of(DLX)),
     )
-    _publish = attr.ib(
-        type=Optional[Publish],
+    func = attr.ib(
+        type=Callable,
         default=None,
-        validator=attr.validators.optional(
-            validator=attr.validators.instance_of(Publish)
-        ),
-    )
-    _db = attr.ib(
-        type=Optional[DB],
-        default=None,
-        validator=attr.validators.optional(validator=attr.validators.instance_of(DB)),
+        validator=attr.validators.optional(validator=attr.validators.is_callable()),
     )
 
     def __attrs_post_init__(self) -> None:
@@ -72,14 +62,9 @@ class Subscribe:
                     await self.dlx.configure()
                 await self._configure_exchange()
                 await self._configure_queue()
-                await self._configure_publish()
                 await self._configure_queue_bind()
             except AttributeNotInitialized:
                 logger.debug("Waiting client initialization...SUBSCRIBE")
-
-    async def _configure_publish(self) -> None:
-        if self._publish:
-            await self._publish.configure()
 
     async def _configure_exchange(self) -> None:
         await self.client.channel.exchange_declare(
@@ -111,26 +96,13 @@ class Subscribe:
         try:
             await self.ack_event(envelope)
             result = await self.task(body)
-            if self._publish:
-                await self._send_event(result)
-            elif self._db:
-                created_by = self._get_created_by(body)
-                await self._db.save(result, created_by)
+            if self.func:
+                await self.func(body, result)
         except Exception as cause:
             logger.error(cause)
             if self.dlx:
                 await self.dlx.send_event(cause, body, envelope, properties)
         return result
-
-    async def _send_event(self, data):
-        try:
-            await self._publish.send_event(bytes(json.dumps(data), "utf-8"))
-        except TypeError:
-            await self._publish.send_event(data)
-
-    def _get_created_by(self, payload: bytes) -> str:
-        raw_data = json.loads(payload)
-        return str(raw_data.get("createdBy", "anonymous"))
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         await self.client.channel.basic_client_nack(

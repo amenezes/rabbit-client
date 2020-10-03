@@ -1,7 +1,6 @@
-import attr
+import pytest
 
 
-def test_attributes(exchange):
-    values = ["exchange", "topic", "#"]
-    for value in values:
-        assert value in attr.asdict(exchange).values()
+@pytest.mark.parametrize("attribute", ["name", "exchange_type", "topic", "durable"])
+def test_attributes(exchange, attribute):
+    assert hasattr(exchange, attribute)

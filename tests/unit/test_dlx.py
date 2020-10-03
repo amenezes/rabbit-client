@@ -6,11 +6,13 @@ from rabbit.exceptions import AttributeNotInitialized
 
 
 @pytest.mark.asyncio
-async def test_ensure_endswith_dlq(dlx):
-    values = {"queue": "queue.dlq", "queue.dlq": "queue.dlq", "a.b.c": "a.b.c.dlq"}
-    for value in values.keys():
-        result = await dlx._ensure_endswith_dlq(value)
-        assert result == values.get(value)
+@pytest.mark.parametrize(
+    "value,expected",
+    [("queue", "queue.dlq"), ("queue.dlq", "queue.dlq"), ("a.b.c", "a.b.c.dlq")],
+)
+async def test_ensure_endswith_dlq(dlx, value, expected):
+    result = await dlx._ensure_endswith_dlq(value)
+    assert result == expected
 
 
 @pytest.mark.asyncio

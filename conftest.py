@@ -9,12 +9,8 @@ from rabbit.subscribe import Subscribe
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.observer import Observer
-from rabbit.polling import PollingPublisher
 from rabbit.exchange import Exchange
-from rabbit.tlog.db import DB
-from rabbit.tlog.migration import Migration
 from rabbit.dlx import DLX
-from rabbit.tlog import Event
 
 
 class AioRabbitClientMock(AioRabbitClient):
@@ -23,7 +19,7 @@ class AioRabbitClientMock(AioRabbitClient):
         self.transport = TransportMock()
         self._channel = ChannelMock()
         self._observer = Observer()
-        self._app = kwargs.get('app')
+        self._app = kwargs.get("app")
 
     @property
     def channel(self):
@@ -36,7 +32,7 @@ class AioRabbitClientMock(AioRabbitClient):
 
 class ChannelMock:
     def __init__(self):
-        self.channel = 'channel'
+        self.channel = "channel"
 
     async def queue_declare(self, *args, **kwargs):
         pass
@@ -62,7 +58,7 @@ class ChannelMock:
 
 class TransportMock:
     def __init__(self):
-        self.transport = 'transport'
+        self.transport = "transport"
 
     def close(self):
         pass
@@ -70,7 +66,7 @@ class TransportMock:
 
 class ProtocolMock:
     def __init__(self):
-        self.protocol = 'protocol'
+        self.protocol = "protocol"
 
     async def channel(self):
         return SubscribeMock()
@@ -97,40 +93,22 @@ class SubscribeMock:
         pass
 
 
-class DBMock(DB):
-    def __init__(self, value=False):
-        self.value = value
-
-    async def exec(self, stmt, params={}):
-        pass
-
-    async def get_oldest_event(self):
-        if self.value:
-            return Event(body=b"test")
-
-
-class MigrationMock(Migration):
-    pass
-
-
 class PropertiesMock(Properties):
-
-    def __init__(self, headers={'x-delay': 5000}):
+    def __init__(self, headers={"x-delay": 5000}):
         self.headers = headers
 
 
 class EnvelopeMock(Envelope):
-
     def __init__(self):
         pass
 
     @property
     def exchange_name(self):
-        return 'src-exchange'
+        return "src-exchange"
 
     @property
     def routing_key(self):
-        return '#'
+        return "#"
 
     @property
     def delivery_tag(self):
@@ -168,11 +146,6 @@ def exchange():
 
 
 @pytest.fixture
-def polling_mock(publish_mock):
-    return PollingPublisher(publish_mock, DBMock())
-
-
-@pytest.fixture
 def dlx(client):
     return DLX(client)
 
@@ -185,26 +158,14 @@ async def publish_mock():
 
 @pytest.fixture
 def subscribe_mock():
-    return Subscribe(
-        client=AioRabbitClientMock(),
-        task=async_echo_job
-    )
+    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job)
 
 
 @pytest.fixture
 def subscribe_dlx(dlx):
-    return Subscribe(
-        client=AioRabbitClientMock(),
-        task=async_echo_job,
-        dlx=dlx
-    )
+    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job, dlx=dlx)
 
 
 @pytest.fixture
 def subscribe_all(dlx, publish_mock):
-    return Subscribe(
-        client=AioRabbitClientMock(),
-        task=async_echo_job,
-        dlx=dlx,
-        publish=publish_mock
-    )
+    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job, dlx=dlx,)

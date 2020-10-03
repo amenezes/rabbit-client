@@ -16,11 +16,6 @@ async def test_configure_with_dlx(subscribe_dlx):
 
 
 @pytest.mark.asyncio
-async def test_configure_publish(subscribe_all):
-    await subscribe_all._configure_publish()
-
-
-@pytest.mark.asyncio
 async def test_configure_exchange(subscribe_mock):
     await subscribe_mock._configure_exchange()
 
@@ -33,11 +28,6 @@ async def test_configure_queue(subscribe_mock):
 @pytest.mark.asyncio
 async def test_configure_queue_bind(subscribe_mock):
     await subscribe_mock._configure_queue_bind()
-
-
-def test_get_created_by(subscribe_mock):
-    result = subscribe_mock._get_created_by(b'{"key": "value"}')
-    assert result is not None
 
 
 @pytest.mark.asyncio

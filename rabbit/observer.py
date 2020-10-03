@@ -2,7 +2,8 @@ from contextlib import suppress
 
 import attr
 
-from rabbit import logger, loop
+from rabbit import logger
+from rabbit.utils import loop
 
 
 @attr.s(slots=True, frozen=True)
