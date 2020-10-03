@@ -49,7 +49,7 @@ async def test_callback(subscribe_mock):
     result = await subscribe_mock.callback(
         ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
     )
-    assert result == b'{"key": "value"}'
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -57,4 +57,4 @@ async def test_callback_with_publish(subscribe_all):
     result = await subscribe_all.callback(
         ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
     )
-    assert result == b'{"key": "value"}'
+    assert result is None

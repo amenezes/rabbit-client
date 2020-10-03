@@ -1,7 +1,7 @@
 import asyncio
 import os
 from contextlib import suppress
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import attr
 from aioamqp.channel import Channel
@@ -91,8 +91,7 @@ class Subscribe:
 
     async def callback(
         self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties
-    ) -> Optional[Any]:
-        result = None
+    ) -> None:
         try:
             await self.ack_event(envelope)
             result = await self.task(body)
@@ -102,7 +101,6 @@ class Subscribe:
             logger.error(cause)
             if self.dlx:
                 await self.dlx.send_event(cause, body, envelope, properties)
-        return result
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         await self.client.channel.basic_client_nack(
