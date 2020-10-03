@@ -72,4 +72,4 @@ class AioRabbitClient:
                     data.pop("password")
                 logger.error(err)
                 await asyncio.sleep(5)
-                await self.persistent_connect()
+                await self.persistent_connect(**kwargs)
