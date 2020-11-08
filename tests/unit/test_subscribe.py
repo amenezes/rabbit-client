@@ -41,7 +41,7 @@ async def test_ack_event(subscribe_mock):
 
 
 def test_subscribe_with_dlx(dlx, subscribe_dlx):
-    assert subscribe_dlx.dlx is not None
+    assert subscribe_dlx._dlx is not None
 
 
 @pytest.mark.asyncio

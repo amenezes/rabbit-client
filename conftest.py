@@ -162,13 +162,9 @@ def subscribe_mock():
 
 @pytest.fixture
 def subscribe_dlx(dlx):
-    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job, dlx=dlx)
+    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job)
 
 
 @pytest.fixture
 def subscribe_all(dlx, publish_mock):
-    return Subscribe(
-        client=AioRabbitClientMock(),
-        task=async_echo_job,
-        dlx=dlx,
-    )
+    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job)

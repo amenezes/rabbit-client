@@ -37,26 +37,27 @@ class Subscribe:
         default=Queue(name=os.getenv("SUBSCRIBE_QUEUE", "default.subscribe.queue")),
         validator=attr.validators.instance_of(Queue),
     )
-    dlx = attr.ib(
-        type=DLX,
-        factory=DLX,
-        validator=attr.validators.instance_of(DLX),
-    )
-    # func = attr.ib(
-    #     type=Callable,
-    #     default=None,
-    #     validator=attr.validators.optional(validator=attr.validators.is_callable()),
-    # )
+    _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
 
     def __attrs_post_init__(self) -> None:
         self._client.watch(self)
-        # self.dlx = DLX(self._client)
+        self._dlx = DLX(
+            queue=Queue(
+                name=self.queue.name,
+                arguments={
+                    "x-dead-letter-exchange": self.exchange.name,
+                    "x-dead-letter-routing-key": "#",
+                },
+            ),
+            routing_key=self.queue.name,
+            exchange=Exchange(name="DLX", exchange_type="direct"),
+        )
 
     async def configure(self) -> None:
         await asyncio.sleep(5)
         with suppress(SynchronizationError):
             try:
-                await self.dlx.configure(self._client)
+                await self._dlx.configure(self._client)
                 await self._configure_exchange()
                 await self._configure_queue()
                 await self._configure_queue_bind()
@@ -92,11 +93,10 @@ class Subscribe:
         try:
             await self.ack_event(envelope)
             await self.task(body)
-            # result = await self.task(body)
-            # if self.func:
-            #     await self.func(body, result)
         except Exception as cause:
-            await asyncio.shield(self.dlx.send_event(cause, body, envelope, properties))
+            await asyncio.shield(
+                self._dlx.send_event(cause, body, envelope, properties)
+            )
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         await self._client.channel.basic_client_nack(
