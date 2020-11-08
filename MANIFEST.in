@@ -1,0 +1,4 @@
+include LICENSE
+include rabbit/alembic.ini
+
+global-exclude __pycache__  *.pyc

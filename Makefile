@@ -1,71 +1,52 @@
 .DEFAULT_GOAL := about
-RABBIT_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep rabbit | wc -l)
-POSTGRES_INSTANCE := $(shell docker-compose -f example/docker-compose.yml ps | grep postgres | wc -l)
-VENV_DIR := $(shell [ ! -d "venv" ] && echo 1 || echo 0)
-CLEAN_TEST_ENV := "false"
+VERSION := $(shell cat rabbit/__version__.py | cut -d'"' -f 2)
 
 lint:
-	@echo "> executing flake8 to check codestyle..."
+ifeq ($(SKIP_STYLE), )
+	@echo "> running isort..."
+	isort rabbit
+	isort tests
+	isort conftest.py
+	@echo "> running black..."
+	black rabbit
+	black tests
+	black conftest.py
+endif
+	@echo "> running flake8..."
 	flake8 rabbit
 	flake8 tests
-	@echo "> executing mypy static type checker..."
+	@echo "> running mypy..."
 	mypy rabbit
-
-clean:
-	@echo "> cleaning development environment"
-	docker-compose -f example/docker-compose.yml down -v
-	docker system prune -f
 
 tests:
 	@echo "> unittest"
-ifeq ($(RABBIT_INSTANCE), 0)
-	@echo "> initializing rabbit container..."
-	docker-compose -f example/docker-compose.yml up -d rabbit
-	sleep 15
-endif
-ifeq ($(POSTGRES_INSTANCE), 0)
-	@echo "> initializing postgres container..."
-	docker-compose -f example/docker-compose.yml up -d postgres
-	sleep 10
-endif
-	alembic -c example/migrations/alembic.ini upgrade head
 	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
-ifeq ($(CLEAN_TEST_ENV), "true")
-	@echo "> cleaning test environment..."
-	make clean
-endif
 
 docs:
 	@echo "> generate project documentation..."
-	pip install portray
-	export PYTHONPATH=.
-	portray as_html
+	portray server
 
 install-deps:
 	@echo "> installing dependencies..."
 	pip install -r requirements-dev.txt
 
-venv:
-ifeq ($(VENV_DIR), 1)
-	@echo "> preparing local development environment"
-	pip install virtualenv
-	virtualenv venv
-else
-	@echo "> venv already exists!"
-endif
+tox:
+	@echo "> running tox..."
+	tox -r -p all
 
 about:
-	@echo "> rabbit-client"
+	@echo "> rabbit-client | v$(VERSION)"
 	@echo ""
-	@echo "make lint         - Runs flake8 and mypy."
+	@echo "make lint         - Runs: [isort > black > flake8 > mypy]"
+	@echo "make tox          - Runs tox."
 	@echo "make tests        - Execute tests."
 	@echo "make docs         - Generate project documentation."
 	@echo "make install-deps - Install development dependencies."
-	@echo "make venv         - Install virtualenv and create venv directory."
 	@echo ""
 	@echo "mailto: alexandre.fmenezes@gmail.com"
 
-ci:
+ci: lint tests
+ifeq ($(TRAVIS_PULL_REQUEST), false)
 	@echo "> download CI dependencies"
 	curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
 	chmod +x ./cc-test-reporter
@@ -73,8 +54,8 @@ ci:
 	codecov --file coverage.xml -t $$CODECOV_TOKEN
 	./cc-test-reporter format-coverage -t coverage.py -o codeclimate.json
 	./cc-test-reporter upload-coverage -i codeclimate.json -r $$CC_TEST_REPORTER_ID
+endif
 
-all: flake tests docs docker-pub clean
+all: install-deps ci tox docs
 
-
-.PHONY: flake clean tests docs install-deps venv ci all
+.PHONY: install-deps lint tests docs tox ci all

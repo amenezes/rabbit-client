@@ -1,55 +1,57 @@
-import asynctest
+import pytest
 
-from rabbit.client import AioRabbitClient
-from rabbit.dlx import DLX
+from conftest import AioRabbitClientMock, EnvelopeMock, PropertiesMock
 from rabbit.exceptions import OperationError
-from rabbit.queue import Queue
-
-from tests.integration.setup import EnvelopeMock, PropertiesMock
 
 
-class TestDLX(asynctest.TestCase):
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "value,expected",
+    [("queue", "queue.dlq"), ("queue.dlq", "queue.dlq"), ("a.b.c", "a.b.c.dlq")],
+)
+async def test_ensure_endswith_dlq(dlx, value, expected):
+    result = await dlx._ensure_endswith_dlq(value)
+    assert result == expected
 
-    async def setUp(self):
-        self.dlx = DLX(
-            Queue(name='queue'),
-            routing_key='queue'
-        )
 
-    async def test_ensure_endswith_dlq(self):
-        values = {
-            'queue': 'queue.dlq',
-            'queue.dlq': 'queue.dlq',
-            'a.b.c': 'a.b.c.dlq'
-        }
-        for value in values.keys():
-            with self.subTest(value=value):
-                self.assertEqual(
-                    await self.dlx._ensure_endswith_dlq(value),
-                    values.get(value)
-                )
+@pytest.mark.asyncio
+async def test_get_default_timeout(dlx):
+    result = await dlx._get_timeout(None)
+    assert result == 25000
 
-    async def test_get_default_timeout(self):
-        result = await self.dlx._get_timeout(None)
-        self.assertEqual(result, 25000)
 
-    async def test_get_cycle_timeout(self):
-        values = {1: 5000, 2: 25000, 3: 125000}
-        for i in values.keys():
-            result = await self.dlx._get_timeout(
-                {'x-delay': values.get(i)}
-            )
-            self.assertEqual(result, int(values.get(i) * 5))
+@pytest.mark.asyncio
+async def test_get_cycle_timeout(dlx):
+    values = {1: 5000, 2: 25000, 3: 125000}
+    for i in values.keys():
+        result = await dlx._get_timeout({"x-delay": values.get(i)})
+        assert result == int(values.get(i) * 5)
 
-    async def test_client_property(self):
-        self.assertIsNone(self.dlx.client)
 
-    async def test_set_client_property(self):
-        self.dlx.client = AioRabbitClient()
+@pytest.mark.asyncio
+async def test_send_event_error_without_client_connection(dlx):
+    with pytest.raises(OperationError):
+        await dlx.send_event(Exception, bytes(), EnvelopeMock(), PropertiesMock())
 
-    async def test_send_event_error_without_client_connection(self):
-        dlx = DLX(Queue('test'), '#')
-        with self.assertRaises(OperationError):
-            await dlx.send_event(
-                Exception, bytes(), EnvelopeMock(), PropertiesMock()
-            )
+
+@pytest.mark.asyncio
+async def test_configure(dlx):
+    await dlx.configure(AioRabbitClientMock())
+
+
+@pytest.mark.asyncio
+async def test_configure_exchange(dlx):
+    await dlx.configure(AioRabbitClientMock())
+    await dlx._configure_exchange()
+
+
+@pytest.mark.asyncio
+async def test_configure_queue(dlx):
+    await dlx.configure(AioRabbitClientMock())
+    await dlx._configure_queue()
+
+
+@pytest.mark.asyncio
+async def test_configure_queue_bind(dlx):
+    await dlx.configure(AioRabbitClientMock())
+    await dlx._configure_queue_bind()

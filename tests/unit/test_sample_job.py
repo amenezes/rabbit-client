@@ -1,12 +1,11 @@
-import unittest
+import pytest
 
-from rabbit.job import echo_job
+from rabbit.job import async_echo_job
+
+PAYLOAD = b'{"mykey": 123}'
 
 
-class TestSampleJob(unittest.TestCase):
-
-    def setUp(self):
-        self.payload = b'{"mykey": 123}'
-
-    def test_sample_job_echo(self):
-        self.assertIsInstance(echo_job(self.payload), bytes)
+@pytest.mark.asyncio
+async def test_async_sample_echo_job():
+    response = await async_echo_job(PAYLOAD)
+    assert isinstance(response, bytes)

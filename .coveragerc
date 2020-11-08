@@ -1,10 +1,13 @@
 [run]
 branch = True
 omit = **__init__.py**
+       rabbit/__version__.py
+       rabbit/migrations/*
+       tests/unit/migrations/*
 
 [report]
 show_missing = True
-sort = Cover
+sort = Miss
 precision = 2
 exclude_lines = logging.info
                 logging.debug
@@ -12,7 +15,7 @@ exclude_lines = logging.info
                 logging.error
 
 [paths]
-source = discovery/
+source = rabbit/
 
 [html]
 directory = .

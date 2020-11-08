@@ -1,21 +1,19 @@
 import json
-import logging
 
-
-logging.getLogger(__name__).addHandler(logging.NullHandler())
-
-
-def echo_job(data: bytes) -> bytes:
-    logging.info(
-        'Using the standard callable to process subscribe events.'
-    )
-
-    data_response = json.loads(data)
-    return bytes(
-        json.dumps(data_response),
-        'utf-8'
-    )
+from rabbit import logger
 
 
 async def async_echo_job(data: bytes) -> bytes:
-    return echo_job(data)
+    """Async job."""
+    logger.warning("Using the standard callable to process subscribe events.")
+    data_response = json.loads(data)
+    logger.info(f"ECHO: {data_response}")
+    return bytes(json.dumps(data_response), "utf-8")
+
+
+async def dlx_job(data: bytes) -> None:
+    """DLX job"""
+    logger.warning("Using the standard callable to process subscribe events.")
+    data_response = json.loads(data)
+    logger.info(f"DLX job: {data_response}")
+    raise Exception("DLX job test")

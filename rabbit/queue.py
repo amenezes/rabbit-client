@@ -1,20 +1,12 @@
 import attr
 
 
-@attr.s(slots=True, frozen=True)
+@attr.s(frozen=True)
 class Queue:
-
-    name = attr.ib(
-        type=str,
-        validator=attr.validators.instance_of(str)
-    )
+    name = attr.ib(type=str, validator=attr.validators.instance_of(str))
     durable = attr.ib(
-        type=bool,
-        default=True,
-        validator=attr.validators.instance_of(bool)
+        type=bool, default=True, validator=attr.validators.instance_of(bool)
     )
     arguments = attr.ib(
-        type=dict,
-        default={},
-        validator=attr.validators.instance_of(dict)
+        type=dict, factory=dict, validator=attr.validators.instance_of(dict)
     )

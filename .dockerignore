@@ -1,5 +1,5 @@
-dist
-*.egg-info
-site
-tests
-venv
+**
+!LICENSE
+!rabbit
+!setup.py
+!requirements.txt
