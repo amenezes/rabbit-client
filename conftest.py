@@ -1,16 +1,15 @@
 import pytest
-
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
-from rabbit.job import async_echo_job
 from rabbit.client import AioRabbitClient
-from rabbit.subscribe import Subscribe
+from rabbit.dlx import DLX
+from rabbit.exchange import Exchange
+from rabbit.job import async_echo_job
+from rabbit.observer import Observer
 from rabbit.publish import Publish
 from rabbit.queue import Queue
-from rabbit.observer import Observer
-from rabbit.exchange import Exchange
-from rabbit.dlx import DLX
+from rabbit.subscribe import Subscribe
 
 
 class AioRabbitClientMock(AioRabbitClient):
@@ -146,8 +145,8 @@ def exchange():
 
 
 @pytest.fixture
-def dlx(client):
-    return DLX(client)
+def dlx():
+    return DLX()
 
 
 @pytest.fixture
@@ -168,4 +167,8 @@ def subscribe_dlx(dlx):
 
 @pytest.fixture
 def subscribe_all(dlx, publish_mock):
-    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job, dlx=dlx,)
+    return Subscribe(
+        client=AioRabbitClientMock(),
+        task=async_echo_job,
+        dlx=dlx,
+    )

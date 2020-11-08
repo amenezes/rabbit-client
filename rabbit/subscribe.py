@@ -1,7 +1,7 @@
 import asyncio
 import os
 from contextlib import suppress
-from typing import Callable, Optional
+from typing import Callable
 
 import attr
 from aioamqp.channel import Channel
@@ -19,8 +19,7 @@ from rabbit.queue import Queue
 
 @attr.s
 class Subscribe:
-
-    client = attr.ib(
+    _client = attr.ib(
         type=AioRabbitClient, validator=attr.validators.instance_of(AioRabbitClient)
     )
     task = attr.ib(type=Callable, validator=attr.validators.is_callable())
@@ -39,27 +38,25 @@ class Subscribe:
         validator=attr.validators.instance_of(Queue),
     )
     dlx = attr.ib(
-        type=Optional[DLX],
-        default=None,
-        validator=attr.validators.optional(validator=attr.validators.instance_of(DLX)),
+        type=DLX,
+        factory=DLX,
+        validator=attr.validators.instance_of(DLX),
     )
-    func = attr.ib(
-        type=Callable,
-        default=None,
-        validator=attr.validators.optional(validator=attr.validators.is_callable()),
-    )
+    # func = attr.ib(
+    #     type=Callable,
+    #     default=None,
+    #     validator=attr.validators.optional(validator=attr.validators.is_callable()),
+    # )
 
     def __attrs_post_init__(self) -> None:
-        self.client.watch(self)
-        if not self.dlx:
-            self.dlx = DLX(self.client)
+        self._client.watch(self)
+        # self.dlx = DLX(self._client)
 
     async def configure(self) -> None:
         await asyncio.sleep(5)
         with suppress(SynchronizationError):
             try:
-                if self.dlx:
-                    await self.dlx.configure()
+                await self.dlx.configure(self._client)
                 await self._configure_exchange()
                 await self._configure_queue()
                 await self._configure_queue_bind()
@@ -67,7 +64,7 @@ class Subscribe:
                 logger.debug("Waiting client initialization...SUBSCRIBE")
 
     async def _configure_exchange(self) -> None:
-        await self.client.channel.exchange_declare(
+        await self._client.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
@@ -75,17 +72,17 @@ class Subscribe:
         await asyncio.sleep(5)
 
     async def _configure_queue(self) -> None:
-        await self.client.channel.queue_declare(
+        await self._client.channel.queue_declare(
             queue_name=self.queue.name, durable=self.queue.durable
         )
 
     async def _configure_queue_bind(self) -> None:
-        await self.client.channel.queue_bind(
+        await self._client.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
             routing_key=self.exchange.topic,
         )
-        await self.client.channel.basic_consume(
+        await self._client.channel.basic_consume(
             callback=self.callback, queue_name=self.queue.name
         )
 
@@ -94,18 +91,17 @@ class Subscribe:
     ) -> None:
         try:
             await self.ack_event(envelope)
-            result = await self.task(body)
-            if self.func:
-                await self.func(body, result)
+            await self.task(body)
+            # result = await self.task(body)
+            # if self.func:
+            #     await self.func(body, result)
         except Exception as cause:
-            logger.error(cause)
-            if self.dlx:
-                await self.dlx.send_event(cause, body, envelope, properties)
+            await asyncio.shield(self.dlx.send_event(cause, body, envelope, properties))
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
-        await self.client.channel.basic_client_nack(
+        await self._client.channel.basic_client_nack(
             delivery_tag=envelope.delivery_tag, requeue=requeue
         )
 
     async def ack_event(self, envelope: Envelope) -> None:
-        await self.client.channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
+        await self._client.channel.basic_client_ack(delivery_tag=envelope.delivery_tag)

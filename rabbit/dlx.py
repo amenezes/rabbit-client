@@ -1,6 +1,5 @@
 import asyncio
 import os
-from typing import Dict
 
 import attr
 from aioamqp.envelope import Envelope
@@ -15,9 +14,11 @@ from rabbit.queue import Queue
 
 @attr.s(slots=True)
 class DLX:
-
     _client = attr.ib(
-        type=AioRabbitClient, validator=attr.validators.instance_of(AioRabbitClient)
+        type=AioRabbitClient,
+        validator=attr.validators.instance_of(AioRabbitClient),
+        repr=False,
+        init=False,
     )
     queue = attr.ib(
         type=Queue,
@@ -46,7 +47,8 @@ class DLX:
         validator=attr.validators.instance_of(Exchange),
     )
 
-    async def configure(self) -> None:
+    async def configure(self, client: AioRabbitClient) -> None:
+        self._client = client
         try:
             await self._configure_exchange()
             await self._configure_queue()
@@ -54,7 +56,7 @@ class DLX:
         except AttributeError:
             await self._client.persistent_connect()
             await asyncio.sleep(5)
-            await self.configure()
+            await self.configure(client)
 
     async def _configure_exchange(self) -> None:
         await self._client.channel.exchange_declare(
@@ -103,15 +105,15 @@ class DLX:
         except AttributeError:
             raise OperationError("Ensure that instance was connected ")
 
-    async def _get_timeout(self, headers, delay=5000):
+    async def _get_timeout(self, headers, delay: int = 5000) -> int:
         if (headers is not None) and ("x-delay" in headers):
             delay = headers["x-delay"]
         return int(delay) * 5
 
     async def _get_properties(
         self, timeout: int, exception_message: Exception, envelope: Envelope
-    ) -> Dict:
-        properties = {
+    ) -> dict:
+        return {
             "expiration": f"{timeout}",
             "headers": {
                 "x-delay": f"{timeout}",
@@ -120,4 +122,3 @@ class DLX:
                 "x-original-routingKey": f"{envelope.routing_key}",
             },
         }
-        return properties

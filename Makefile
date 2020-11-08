@@ -4,11 +4,13 @@ VERSION := $(shell cat rabbit/__version__.py | cut -d'"' -f 2)
 lint:
 ifeq ($(SKIP_STYLE), )
 	@echo "> running isort..."
-	isort rabbit/
-	isort tests/
+	isort rabbit
+	isort tests
+	isort conftest.py
 	@echo "> running black..."
-	black --exclude=rabbit/migrations rabbit
+	black rabbit
 	black tests
+	black conftest.py
 endif
 	@echo "> running flake8..."
 	flake8 rabbit

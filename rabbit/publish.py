@@ -13,7 +13,6 @@ from rabbit.exchange import Exchange
 
 @attr.s(slots=True)
 class Publish:
-
     _client = attr.ib(
         type=AioRabbitClient, validator=attr.validators.instance_of(AioRabbitClient)
     )

@@ -1,8 +1,7 @@
 import pytest
 
 from conftest import AioRabbitClientMock, EnvelopeMock, PropertiesMock
-from rabbit.dlx import DLX
-from rabbit.exceptions import AttributeNotInitialized
+from rabbit.exceptions import OperationError
 
 
 @pytest.mark.asyncio
@@ -31,29 +30,28 @@ async def test_get_cycle_timeout(dlx):
 
 @pytest.mark.asyncio
 async def test_send_event_error_without_client_connection(dlx):
-    with pytest.raises(AttributeNotInitialized):
+    with pytest.raises(OperationError):
         await dlx.send_event(Exception, bytes(), EnvelopeMock(), PropertiesMock())
 
 
 @pytest.mark.asyncio
-async def test_configure():
-    dlx = DLX(AioRabbitClientMock())
-    await dlx.configure()
+async def test_configure(dlx):
+    await dlx.configure(AioRabbitClientMock())
 
 
 @pytest.mark.asyncio
-async def test_configure_exchange():
-    dlx = DLX(AioRabbitClientMock())
+async def test_configure_exchange(dlx):
+    await dlx.configure(AioRabbitClientMock())
     await dlx._configure_exchange()
 
 
 @pytest.mark.asyncio
-async def test_configure_queue():
-    dlx = DLX(AioRabbitClientMock())
+async def test_configure_queue(dlx):
+    await dlx.configure(AioRabbitClientMock())
     await dlx._configure_queue()
 
 
 @pytest.mark.asyncio
-async def test_configure_queue_bind():
-    dlx = DLX(AioRabbitClientMock())
+async def test_configure_queue_bind(dlx):
+    await dlx.configure(AioRabbitClientMock())
     await dlx._configure_queue_bind()

@@ -1,10 +1,10 @@
 import asyncio
 import os
-from typing import Dict
 
 import aioamqp
 import attr
 from aioamqp.channel import Channel
+from aioamqp.protocol import AmqpProtocol
 
 from rabbit import logger
 from rabbit.exceptions import AttributeNotInitialized
@@ -13,7 +13,6 @@ from rabbit.observer import Observer
 
 @attr.s(slots=True)
 class AioRabbitClient:
-
     host = attr.ib(
         type=str,
         default=os.getenv("BROKER_HOST", "localhost"),
@@ -25,10 +24,10 @@ class AioRabbitClient:
         validator=attr.validators.instance_of(int),
         converter=int,
     )
-    _observer = attr.ib(type=Observer, factory=Observer, init=False)
-    _channel = attr.ib(init=False, default=None)
-    protocol = attr.ib(init=False, default=None)
-    transport = attr.ib(init=False, default=None)
+    _observer = attr.ib(type=Observer, factory=Observer, init=False, repr=False)
+    _channel = attr.ib(type=Channel, init=False, default=None, repr=False)
+    protocol = attr.ib(type=AmqpProtocol, init=False, default=None, repr=False)
+    transport = attr.ib(init=False, default=None, repr=False)
 
     @property
     def channel(self) -> Channel:
@@ -49,7 +48,9 @@ class AioRabbitClient:
 
     async def connect(self, **kwargs) -> None:
         self.transport, self.protocol = await aioamqp.connect(
-            host=self.host, port=self.port, **kwargs,
+            host=self.host,
+            port=self.port,
+            **kwargs,
         )
         await self._configure_channel()
 
@@ -58,7 +59,7 @@ class AioRabbitClient:
             await asyncio.sleep(5)
             self.channel = await self.protocol.channel()
 
-    async def persistent_connect(self, **kwargs: Dict[str, str]) -> None:
+    async def persistent_connect(self, **kwargs: dict) -> None:
         while True:
             try:
                 await asyncio.sleep(1)

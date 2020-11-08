@@ -15,13 +15,14 @@ class ConsumerCommand(Command):
     Start a consumer sample application 📥
 
     consumer
+        {dlx? : Test DLX job task}
     """
 
     def handle(self):
         self.line("<info>>></info> <options=bold>starting consumer...</>")
         consumer = Consumer()
         try:
-            consumer.run()
+            consumer.run(self.argument("dlx"))
         except KeyboardInterrupt:
             self.line("<info>!></info> <options=bold>consumer finished!</>")
             raise SystemExit

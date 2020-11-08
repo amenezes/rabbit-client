@@ -8,7 +8,6 @@ from rabbit.utils import loop
 
 @attr.s(slots=True, frozen=True)
 class Observer:
-
     _observers = attr.ib(
         type=list, factory=list, validator=attr.validators.instance_of(list)
     )
@@ -30,11 +29,11 @@ class Observer:
     def __len__(self) -> int:
         return len(self._observers)
 
-    def __contains__(self, value):
+    def __contains__(self, value) -> bool:
         if value in (self._observers):
             return True
         return False
 
     @property
-    def observers(self):
+    def observers(self) -> list:
         return self._observers

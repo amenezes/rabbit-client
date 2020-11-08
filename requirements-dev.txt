@@ -1,18 +1,16 @@
 -r requirements.txt
-isort==4.3.21
-black==19.10b0
-portray==1.3.1
-pytest==5.4.1
-pytest-asyncio==0.10.0
-pytest-cov==2.8.1
-codecov==2.0.22
-coverage==5.0.4
-flake8==3.7.9
-flake8-blind-except==0.1.1
-flake8-polyfill==1.0.2
+isort
+black
+portray
+pytest
+pytest-asyncio
+pytest-cov
+codecov
+coverage
+flake8
+flake8-blind-except
 mypy
-tox==3.14.6
-tox-asdf==0.1.0
-psycopg2-binary==2.8.4
+tox
+tox-asdf
 # command-line
-cleo==0.8.0
+cleo
