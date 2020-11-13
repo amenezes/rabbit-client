@@ -41,8 +41,7 @@ class EventCommand(Command):
         self.line(
             f"<info>>></info> <options=bold>sending event to: "
             f"[exchange: {os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange')}"
-            f" | topic: {os.getenv('SUBSCRIBE_TOPIC', '#')} | "
-            f"subscribe: {os.getenv('SUBSCRIBE_QUEUE', 'default.subscribe.queue')}]</>"
+            f" | topic: {os.getenv('SUBSCRIBE_TOPIC', '#')}]</>"
         )
         try:
             with open(f"{self.argument('payload')}", "rb") as f:

@@ -40,7 +40,6 @@ class Subscribe:
     _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
 
     def __attrs_post_init__(self) -> None:
-        self._client.watch(self)
         self._dlx = DLX(
             queue=Queue(
                 name=self.queue.name,
@@ -52,6 +51,7 @@ class Subscribe:
             routing_key=self.queue.name,
             exchange=Exchange(name="DLX", exchange_type="direct"),
         )
+        self._client.watch(self)
 
     async def configure(self) -> None:
         await asyncio.sleep(5)
