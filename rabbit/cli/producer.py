@@ -30,3 +30,5 @@ class Producer:
         publish = self.configure_publish()
         for i in range(0, self.qtd):
             self.loop.run_until_complete(publish.send_event(self.payload))
+        for task in asyncio.all_tasks(self.loop):
+            task.cancel()

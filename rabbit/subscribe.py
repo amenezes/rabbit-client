@@ -20,7 +20,9 @@ from rabbit.queue import Queue
 @attr.s
 class Subscribe:
     _client = attr.ib(
-        type=AioRabbitClient, validator=attr.validators.instance_of(AioRabbitClient)
+        type=AioRabbitClient,
+        validator=attr.validators.instance_of(AioRabbitClient),
+        repr=False,
     )
     task = attr.ib(type=Callable, validator=attr.validators.is_callable())
     exchange = attr.ib(
@@ -38,9 +40,11 @@ class Subscribe:
         validator=attr.validators.instance_of(Queue),
     )
     _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
+    _channel = attr.ib(init=False, repr=False)
 
     def __attrs_post_init__(self) -> None:
         self._dlx = DLX(
+            client=self._client,
             queue=Queue(
                 name=self.queue.name,
                 arguments={
@@ -51,13 +55,15 @@ class Subscribe:
             routing_key=self.queue.name,
             exchange=Exchange(name="DLX", exchange_type="direct"),
         )
-        self._client.watch(self)
 
     async def configure(self) -> None:
         await asyncio.sleep(5)
+        self._channel = await self._client.get_channel()
+        loop = asyncio.get_running_loop()
+        loop.create_task(self._client.watch(self), name="subscribe_watcher")
         with suppress(SynchronizationError):
             try:
-                await self._dlx.configure(self._client)
+                await self._dlx.configure()
                 await self._configure_exchange()
                 await self._configure_queue()
                 await self._configure_queue_bind()
@@ -65,7 +71,7 @@ class Subscribe:
                 logger.debug("Waiting client initialization...SUBSCRIBE")
 
     async def _configure_exchange(self) -> None:
-        await self._client.channel.exchange_declare(
+        await self._channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
@@ -73,17 +79,17 @@ class Subscribe:
         await asyncio.sleep(5)
 
     async def _configure_queue(self) -> None:
-        await self._client.channel.queue_declare(
+        await self._channel.queue_declare(
             queue_name=self.queue.name, durable=self.queue.durable
         )
 
     async def _configure_queue_bind(self) -> None:
-        await self._client.channel.queue_bind(
+        await self._channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
             routing_key=self.exchange.topic,
         )
-        await self._client.channel.basic_consume(
+        await self._channel.basic_consume(
             callback=self.callback, queue_name=self.queue.name
         )
 
@@ -99,9 +105,9 @@ class Subscribe:
             )
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
-        await self._client.channel.basic_client_nack(
+        await self._channel.basic_client_nack(
             delivery_tag=envelope.delivery_tag, requeue=requeue
         )
 
     async def ack_event(self, envelope: Envelope) -> None:
-        await self._client.channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
+        await self._channel.basic_client_ack(delivery_tag=envelope.delivery_tag)

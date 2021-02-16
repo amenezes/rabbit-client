@@ -14,7 +14,9 @@ from rabbit.exchange import Exchange
 @attr.s(slots=True)
 class Publish:
     _client = attr.ib(
-        type=AioRabbitClient, validator=attr.validators.instance_of(AioRabbitClient)
+        type=AioRabbitClient,
+        validator=attr.validators.instance_of(AioRabbitClient),
+        repr=False,
     )
     exchange = attr.ib(
         type=Exchange,
@@ -25,11 +27,13 @@ class Publish:
         ),
         validator=attr.validators.instance_of(Exchange),
     )
-
-    def __attrs_post_init__(self) -> None:
-        self._client.watch(self)
+    _channel = attr.ib(init=False, repr=False)
 
     async def configure(self) -> None:
+        await asyncio.sleep(1)
+        self._channel = await self._client.get_channel()
+        loop = asyncio.get_running_loop()
+        loop.create_task(self._client.watch(self), name="publish_watcher")
         with suppress(SynchronizationError):
             try:
                 await self._configure_exchange()
@@ -37,7 +41,7 @@ class Publish:
                 logger.debug("Waiting client initialization...PUBLISH")
 
     async def _configure_exchange(self) -> None:
-        await self._client.channel.exchange_declare(
+        await self._channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
@@ -45,7 +49,7 @@ class Publish:
         await asyncio.sleep(2)
 
     async def send_event(self, payload: bytes, **kwargs) -> None:
-        await self._client.channel.publish(
+        await self._channel.publish(
             payload=payload,
             exchange_name=self.exchange.name,
             routing_key=self.exchange.topic,

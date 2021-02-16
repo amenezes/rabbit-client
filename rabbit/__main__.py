@@ -35,13 +35,16 @@ class EventCommand(Command):
     send-event
         {payload : payload file in json format.}
         {--e|events=1 : events to send.}
+        {--x|exchange=default.in.exchange : events to send.}
+        {--t|topic=# : events to send.}
     """
 
     def handle(self):
         self.line(
             f"<info>>></info> <options=bold>sending event to: "
-            f"[exchange: {os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange')}"
-            f" | topic: {os.getenv('SUBSCRIBE_TOPIC', '#')}]</>"
+            f"[exchange: {os.getenv('PUBLISH_EXCHANGE', self.option('exchange'))}"
+            f" | topic: {os.getenv('PUBLISH_TOPIC', self.option('topic'))}"
+            f" | events: {self.option('events')}]</>"
         )
         try:
             with open(f"{self.argument('payload')}", "rb") as f:

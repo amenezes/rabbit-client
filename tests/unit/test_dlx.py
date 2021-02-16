@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import AioRabbitClientMock, EnvelopeMock, PropertiesMock
+from conftest import EnvelopeMock, PropertiesMock
 from rabbit.exceptions import OperationError
 
 
@@ -35,23 +35,5 @@ async def test_send_event_error_without_client_connection(dlx):
 
 
 @pytest.mark.asyncio
-async def test_configure(dlx):
-    await dlx.configure(AioRabbitClientMock())
-
-
-@pytest.mark.asyncio
-async def test_configure_exchange(dlx):
-    await dlx.configure(AioRabbitClientMock())
-    await dlx._configure_exchange()
-
-
-@pytest.mark.asyncio
-async def test_configure_queue(dlx):
-    await dlx.configure(AioRabbitClientMock())
-    await dlx._configure_queue()
-
-
-@pytest.mark.asyncio
-async def test_configure_queue_bind(dlx):
-    await dlx.configure(AioRabbitClientMock())
-    await dlx._configure_queue_bind()
+async def test_configure(dlx_mock):
+    await dlx_mock.configure()

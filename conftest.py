@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
@@ -6,7 +8,6 @@ from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
 from rabbit.exchange import Exchange
 from rabbit.job import async_echo_job
-from rabbit.observer import Observer
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.subscribe import Subscribe
@@ -14,19 +15,20 @@ from rabbit.subscribe import Subscribe
 
 class AioRabbitClientMock(AioRabbitClient):
     def __init__(self, *args, **kwargs):
-        self.protocol = ProtocolMock()
+        self._protocol = ProtocolMock()
         self.transport = TransportMock()
-        self._channel = ChannelMock()
-        self._observer = Observer()
         self._app = kwargs.get("app")
 
     @property
-    def channel(self):
-        return self._channel
+    def protocol(self):
+        return self._protocol
 
-    @channel.setter
-    def channel(self, value):
+    @protocol.setter
+    def protocol(self, value):
         pass
+
+    async def get_channel(self):
+        return ChannelMock()
 
 
 class ChannelMock:
@@ -135,18 +137,18 @@ def publish(client):
 
 
 @pytest.fixture
-def observer():
-    return Observer()
-
-
-@pytest.fixture
 def exchange():
     return Exchange(name="exchange", exchange_type="topic", topic="#")
 
 
 @pytest.fixture
-def dlx():
-    return DLX()
+def dlx(client):
+    return DLX(client)
+
+
+@pytest.fixture
+def dlx_mock():
+    return DLX(AioRabbitClientMock())
 
 
 @pytest.fixture

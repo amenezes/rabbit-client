@@ -8,7 +8,6 @@ pytest-cov
 codecov
 coverage
 flake8
-flake8-blind-except
 mypy
 tox
 tox-asdf
