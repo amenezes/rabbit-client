@@ -39,6 +39,9 @@ class Subscribe:
         default=Queue(name=os.getenv("SUBSCRIBE_QUEUE", "default.subscribe.queue")),
         validator=attr.validators.instance_of(Queue),
     )
+    concurrent = attr.ib(
+        type=int, default=1, validator=attr.validators.instance_of(int)
+    )
     _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
     _channel = attr.ib(init=False, repr=False)
 
@@ -55,10 +58,13 @@ class Subscribe:
             routing_key=self.queue.name,
             exchange=Exchange(name="DLX", exchange_type="direct"),
         )
+        self._job_queue: asyncio.queues.Queue = asyncio.Queue(maxsize=self.concurrent)
+        self._loop = asyncio.get_event_loop()
 
     async def configure(self) -> None:
         await asyncio.sleep(5)
         self._channel = await self._client.get_channel()
+        await self.qos(prefetch_count=self.concurrent)
         loop = asyncio.get_running_loop()
         loop.create_task(self._client.watch(self), name="subscribe_watcher")
         with suppress(SynchronizationError):
@@ -96,18 +102,50 @@ class Subscribe:
     async def callback(
         self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties
     ) -> None:
+        if not self._job_queue.full():
+            self._job_queue.put_nowait((body, envelope, properties))
+            self._loop.create_task(self._run())
+        else:
+            await self.nack_event(envelope, requeue=True)
+            await self._job_queue.join()
+
+    async def _run(self) -> None:
         try:
-            await self.ack_event(envelope)
-            await self.task(body)
+            while True:
+                body, envelope, properties = await self._job_queue.get()
+                await self.task(body)
+                self._job_queue.task_done()
+                await self.ack_event(envelope, multiple=False)
         except Exception as cause:
             await asyncio.shield(
                 self._dlx.send_event(cause, body, envelope, properties)
             )
 
-    async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
+    async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
+        await self._channel.basic_client_ack(
+            delivery_tag=envelope.delivery_tag, multiple=multiple
+        )
+
+    async def nack_event(
+        self, envelope: Envelope, multiple: bool = False, requeue: bool = True
+    ) -> None:
         await self._channel.basic_client_nack(
+            delivery_tag=envelope.delivery_tag, multiple=multiple, requeue=requeue
+        )
+
+    async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
+        await self._channel.basic_reject(
             delivery_tag=envelope.delivery_tag, requeue=requeue
         )
 
-    async def ack_event(self, envelope: Envelope) -> None:
-        await self._channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
+    async def qos(
+        self,
+        prefetch_size: int = 0,
+        prefetch_count: int = 0,
+        connection_global: bool = False,
+    ):
+        await self._channel.basic_qos(
+            prefetch_size=prefetch_size,
+            prefetch_count=prefetch_count,
+            connection_global=connection_global,
+        )

@@ -56,6 +56,12 @@ class ChannelMock:
     async def basic_client_nack(self, *args, **kwargs):
         pass
 
+    async def basic_qos(self, *args, **kwargs):
+        pass
+
+    async def basic_reject(self, *args, **kwargs):
+        pass
+
 
 class TransportMock:
     def __init__(self):
