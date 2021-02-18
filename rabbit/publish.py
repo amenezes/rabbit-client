@@ -21,7 +21,7 @@ class Publish:
     exchange = attr.ib(
         type=Exchange,
         default=Exchange(
-            name=os.getenv("PUBLISH_EXCHANGE", "default.out.exchange"),
+            name=os.getenv("PUBLISH_EXCHANGE", "default.in.exchange"),
             exchange_type=os.getenv("PUBLISH_EXCHANGE_TYPE", "topic"),
             topic=os.getenv("PUBLISH_TOPIC", "#"),
         ),

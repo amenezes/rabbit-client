@@ -17,7 +17,7 @@ from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
 
-@attr.s
+@attr.s(slots=True)
 class Subscribe:
     _client = attr.ib(
         type=AioRabbitClient,
@@ -43,6 +43,8 @@ class Subscribe:
         type=int, default=1, validator=attr.validators.instance_of(int)
     )
     _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
+    _job_queue = attr.ib(init=False, repr=False)
+    _loop = attr.ib(init=False, repr=False)
     _channel = attr.ib(init=False, repr=False)
 
     def __attrs_post_init__(self) -> None:
@@ -58,7 +60,7 @@ class Subscribe:
             routing_key=self.queue.name,
             exchange=Exchange(name="DLX", exchange_type="direct"),
         )
-        self._job_queue: asyncio.queues.Queue = asyncio.Queue(maxsize=self.concurrent)
+        self._job_queue = asyncio.Queue(maxsize=self.concurrent)
         self._loop = asyncio.get_event_loop()
 
     async def configure(self) -> None:
@@ -111,11 +113,10 @@ class Subscribe:
 
     async def _run(self) -> None:
         try:
-            while True:
-                body, envelope, properties = await self._job_queue.get()
-                await self.task(body)
-                self._job_queue.task_done()
-                await self.ack_event(envelope, multiple=False)
+            body, envelope, properties = await self._job_queue.get()
+            await self.task(body)
+            self._job_queue.task_done()
+            await self.ack_event(envelope, multiple=False)
         except Exception as cause:
             await asyncio.shield(
                 asyncio.gather(
