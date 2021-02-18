@@ -15,14 +15,25 @@ class ConsumerCommand(Command):
     Start a consumer sample application 📥
 
     consumer
-        {dlx? : Test DLX job task}
+        {chaos? : enable chaos mode. Raise random Exception to test DLX mechanism.}
+        {--c|concurrent=1 : concurrent events to process.}
+        {--x|exchange=default.in.exchange : exchange name.}
+        {--t|type=topic : exchange topic type name.}
+        {--k|key=# : exchange topic key.}
+        {--f|queue=default.subscribe.queue : queue name.}
     """
 
     def handle(self):
         self.line("<info>>></info> <options=bold>starting consumer...</>")
-        consumer = Consumer()
+        consumer = Consumer(
+            exchange_name=os.getenv("SUBSCRIBE_EXCHANGE", self.option("exchange")),
+            exchange_type=os.getenv("SUBSCRIBE_EXCHANGE_TYPE", self.option("type")),
+            exchange_topic=os.getenv("SUBSCRIBE_TOPIC", self.option("key")),
+            queue_name=os.getenv("SUBSCRIBE_QUEUE", self.option("queue")),
+            concurrent=int(self.option("concurrent")),
+        )
         try:
-            consumer.run(self.argument("dlx"))
+            consumer.run(self.argument("chaos"))
         except KeyboardInterrupt:
             self.line("<info>!></info> <options=bold>consumer finished!</>")
             raise SystemExit

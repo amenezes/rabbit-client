@@ -118,7 +118,10 @@ class Subscribe:
                 await self.ack_event(envelope, multiple=False)
         except Exception as cause:
             await asyncio.shield(
-                self._dlx.send_event(cause, body, envelope, properties)
+                asyncio.gather(
+                    self.ack_event(envelope, multiple=False),
+                    self._dlx.send_event(cause, body, envelope, properties),
+                )
             )
 
     async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:

@@ -1,23 +1,23 @@
 import asyncio
 import json
-from random import randint
+import random
 
 from rabbit import logger
 
 
 async def async_echo_job(data: bytes) -> bytes:
-    """Async job."""
-    await asyncio.sleep(randint(1, 10))
+    """async simple job."""
+    await asyncio.sleep(random.randint(5, 10))
     logger.warning("Using the standard callable to process subscribe events.")
     data_response = json.loads(data)
     logger.info(f"ECHO: {data_response}")
     return bytes(json.dumps(data_response), "utf-8")
 
 
-async def dlx_job(data: bytes) -> None:
-    """DLX job"""
-    await asyncio.sleep(randint(1, 10))
-    logger.warning("Using the standard callable to process subscribe events.")
-    data_response = json.loads(data)
-    logger.info(f"DLX job: {data_response}")
-    raise Exception("DLX job test")
+async def async_chaos_job(data: bytes) -> bytes:
+    """async chaos job."""
+    if random.choice([True, False]):
+        await asyncio.sleep(random.randint(5, 10))
+        raise Exception("Exception sample.")
+    data_response = await async_echo_job(data)
+    return data_response
