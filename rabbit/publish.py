@@ -33,7 +33,8 @@ class Publish:
         await asyncio.sleep(1)
         self._channel = await self._client.get_channel()
         loop = asyncio.get_running_loop()
-        loop.create_task(self._client.watch(self), name="publish_watcher")
+        # loop.create_task(self._client.watch(self), name="publish_watcher")
+        loop.create_task(self._client.watch(self))
         with suppress(SynchronizationError):
             try:
                 await self._configure_exchange()

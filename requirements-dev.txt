@@ -11,5 +11,3 @@ flake8
 mypy
 tox
 tox-asdf
-# command-line
-cleo
