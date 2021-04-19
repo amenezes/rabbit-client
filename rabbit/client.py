@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 import aioamqp
 import attr
@@ -8,69 +7,49 @@ from aioamqp.protocol import AmqpProtocol
 
 from rabbit import logger
 from rabbit.exceptions import AttributeNotInitialized
-from rabbit.observer import Observer
 
 
 @attr.s(slots=True)
 class AioRabbitClient:
-    host = attr.ib(
-        type=str,
-        default=os.getenv("BROKER_HOST", "localhost"),
-        validator=attr.validators.instance_of(str),
-    )
-    port = attr.ib(
-        type=int,
-        default=int(os.getenv("BROKER_PORT", 5672)),
-        validator=attr.validators.instance_of(int),
-        converter=int,
-    )
-    _observer = attr.ib(type=Observer, factory=Observer, init=False, repr=False)
-    _channel = attr.ib(type=Channel, init=False, default=None, repr=False)
-    protocol = attr.ib(type=AmqpProtocol, init=False, default=None, repr=False)
+    _protocol = attr.ib(type=AmqpProtocol, init=False, default=None, repr=False)
     transport = attr.ib(init=False, default=None, repr=False)
+    _event = attr.ib(repr=False, init=False)
+
+    def __attrs_post_init__(self):
+        self._event = asyncio.Event()
+
+    async def watch(self, item):
+        self._event.clear()
+        await self._event.wait()
+        if not item.__module__.endswith(".dlx"):
+            await item.configure()
 
     @property
-    def channel(self) -> Channel:
-        if not self._channel:
+    def protocol(self):
+        return self._protocol
+
+    @protocol.setter
+    def protocol(self, value):
+        self._protocol = value
+        self._event.set()
+
+    async def get_channel(self) -> Channel:
+        if not self.protocol:
             raise AttributeNotInitialized("Connection not initialized.")
-        return self._channel
-
-    @channel.setter
-    def channel(self, value) -> None:
-        self._channel = value
-        self._observer.notify()
-
-    def watch(self, observer) -> None:
-        logger.debug(
-            f"Object {observer.__class__} " "registered to monitoring channel changes."
-        )
-        self._observer.attach(observer)
+        channel = await self.protocol.channel()
+        return channel
 
     async def connect(self, **kwargs) -> None:
-        self.transport, self.protocol = await aioamqp.connect(
-            host=self.host,
-            port=self.port,
-            **kwargs,
-        )
-        await self._configure_channel()
+        self.transport, self.protocol = await aioamqp.connect(**kwargs)
 
-    async def _configure_channel(self) -> None:
-        if self.protocol:
-            await asyncio.sleep(5)
-            self.channel = await self.protocol.channel()
-
-    async def persistent_connect(self, **kwargs: dict) -> None:
+    async def persistent_connect(self, **kwargs):
         while True:
             try:
-                await asyncio.sleep(1)
-                await self.connect(**kwargs)
+                self.transport, self.protocol = await aioamqp.connect(**kwargs)
                 await asyncio.sleep(2)
                 await self.protocol.wait_closed()
                 self.transport.close()
             except (OSError, aioamqp.exceptions.AmqpClosedConnection) as err:
-                data = kwargs.copy()
-                if "password" in data:
-                    data.pop("password")
-                logger.error(err)
+                logger.info(f"Error: {err} - Params: {kwargs}")
                 await asyncio.sleep(5)
                 await self.persistent_connect(**kwargs)

@@ -1,8 +1,8 @@
 import pytest
 
-from conftest import AioAmqpMock
 from rabbit.client import aioamqp
 from rabbit.exceptions import AttributeNotInitialized
+from tests.conftest import AioAmqpMock
 
 
 async def aioamqp_mock(*args, **kwargs):
@@ -11,16 +11,12 @@ async def aioamqp_mock(*args, **kwargs):
     return transport, protocol
 
 
-def test_watch(client, subscribe_mock):
-    client.watch(subscribe_mock)
-    assert subscribe_mock in client._observer.observers
-
-
 @pytest.mark.asyncio
 async def test_connect(client, monkeypatch):
     monkeypatch.setattr(aioamqp, "connect", aioamqp_mock)
     await client.connect()
-    assert client.channel is not None
+    channel = await client.get_channel()
+    assert channel is not None
 
 
 @pytest.mark.skip
@@ -29,6 +25,7 @@ async def test_persistent_connect(client, monkeypatch):
     await client.persistent_connect()
 
 
-def test_channel_not_initialized(client):
+@pytest.mark.asyncio
+async def test_channel_not_initialized(client):
     with pytest.raises(AttributeNotInitialized):
-        client.channel
+        await client.get_channel()

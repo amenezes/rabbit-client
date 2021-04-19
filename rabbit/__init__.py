@@ -4,3 +4,12 @@ from .__version__ import __version__
 
 logger = logging.getLogger("rabbit-client")
 logger.addHandler(logging.NullHandler())
+
+from rabbit.client import AioRabbitClient
+from rabbit.dlx import DLX
+from rabbit.exchange import Exchange
+from rabbit.publish import Publish
+from rabbit.queue import Queue
+from rabbit.subscribe import Subscribe
+
+__all__ = ["AioRabbitClient", "DLX", "Exchange", "Queue", "Publish", "Subscribe"]

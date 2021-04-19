@@ -10,8 +10,9 @@
 asyncio rabbit client powered by [aioamqp](https://github.com/Polyconseil/aioamqp).
 
 rabbit-client provides a simple and automatic configuration to work with:  
-- pub/sub and [Dead Letter Exchanges](https://www.rabbitmq.com/dlx.html) with [rabbitmq](https://www.rabbitmq.com);  
-- [polling publisher pattern](https://microservices.io/patterns/data/polling-publisher.html).
+
+  - pub/sub and [Dead Letter Exchanges](https://www.rabbitmq.com/dlx.html) with [rabbitmq](https://www.rabbitmq.com);  
+  - [polling publisher pattern](https://microservices.io/patterns/data/polling-publisher.html) `out-of-box`.
 
 ## Installing
 

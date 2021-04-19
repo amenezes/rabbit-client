@@ -15,14 +15,25 @@ class ConsumerCommand(Command):
     Start a consumer sample application 📥
 
     consumer
-        {dlx? : Test DLX job task}
+        {chaos? : enable chaos mode. Raise random Exception to test DLX mechanism.}
+        {--c|concurrent=1 : concurrent events to process.}
+        {--x|exchange=default.in.exchange : exchange name.}
+        {--t|type=topic : exchange topic type name.}
+        {--k|key=# : exchange topic key.}
+        {--f|queue=default.subscribe.queue : queue name.}
     """
 
     def handle(self):
         self.line("<info>>></info> <options=bold>starting consumer...</>")
-        consumer = Consumer()
+        consumer = Consumer(
+            exchange_name=os.getenv("SUBSCRIBE_EXCHANGE", self.option("exchange")),
+            exchange_type=os.getenv("SUBSCRIBE_EXCHANGE_TYPE", self.option("type")),
+            exchange_topic=os.getenv("SUBSCRIBE_TOPIC", self.option("key")),
+            queue_name=os.getenv("SUBSCRIBE_QUEUE", self.option("queue")),
+            concurrent=int(self.option("concurrent")),
+        )
         try:
-            consumer.run(self.argument("dlx"))
+            consumer.run(self.argument("chaos"))
         except KeyboardInterrupt:
             self.line("<info>!></info> <options=bold>consumer finished!</>")
             raise SystemExit
@@ -34,15 +45,19 @@ class EventCommand(Command):
 
     send-event
         {payload : payload file in json format.}
-        {--e|events=1 : events to send.}
+        {--e|events=1 : qtd events to send.}
+        {--x|exchange=default.in.exchange : exchange name.}
+        {--t|type=topic : exchange topic type name.}
+        {--k|key=# : exchange topic key.}
     """
 
     def handle(self):
         self.line(
             f"<info>>></info> <options=bold>sending event to: "
-            f"[exchange: {os.getenv('SUBSCRIBE_EXCHANGE', 'default.in.exchange')}"
-            f" | topic: {os.getenv('SUBSCRIBE_TOPIC', '#')} | "
-            f"subscribe: {os.getenv('SUBSCRIBE_QUEUE', 'default.subscribe.queue')}]</>"
+            f"[exchange: {os.getenv('PUBLISH_EXCHANGE', self.option('exchange'))}"
+            f" | type: {os.getenv('PUBLISH_EXCHANGE_TYPE', self.option('type'))}"
+            f" | key: {os.getenv('PUBLISH_TOPIC', self.option('key'))}"
+            f" | events: {self.option('events')}]</>"
         )
         try:
             with open(f"{self.argument('payload')}", "rb") as f:
@@ -51,7 +66,13 @@ class EventCommand(Command):
             self.line(f"<error>File not found: {self.argument('payload')}</error>")
             sys.exit(1)
         try:
-            prod = Producer(payload, qtd=int(self.option("events")))
+            prod = Producer(
+                payload,
+                qtd=int(self.option("events")),
+                name=os.getenv("PUBLISH_EXCHANGE", self.option("exchange")),
+                exchange_type=os.getenv("PUBLISH_EXCHANGE_TYPE", self.option("type")),
+                topic=os.getenv("PUBLISH_TOPIC", self.option("key")),
+            )
             prod.send_event()
             self.line("<info>!></info> <options=bold>event successfully submitted!</>")
         except OSError:

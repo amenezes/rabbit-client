@@ -19,11 +19,8 @@ setuptools.setup(
     url="https://github.com/amenezes/rabbit-client",
     packages=setuptools.find_packages(include=["rabbit", "rabbit.*"]),
     entry_points={"console_scripts": ["rabbit-client=rabbit.__main__:application.run [cli]"]},
-    package_data={
-        '': ['rabbit/alembic.ini']
-    },
     include_package_data=True,
-    python_requires='>=3.6.0',
+    python_requires='>=3.7.*',
     project_urls=OrderedDict((
         ('Documentation', 'https://rabbit-client.amenezes.net'),
         ('Code', 'https://github.com/amenezes/rabbit-client'),
@@ -54,7 +51,6 @@ setuptools.setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
