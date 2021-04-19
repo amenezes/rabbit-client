@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties

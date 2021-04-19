@@ -1,8 +1,8 @@
 import pytest
 
-from conftest import AioAmqpMock
 from rabbit.client import aioamqp
 from rabbit.exceptions import AttributeNotInitialized
+from tests.conftest import AioAmqpMock
 
 
 async def aioamqp_mock(*args, **kwargs):

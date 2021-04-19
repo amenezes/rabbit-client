@@ -1,6 +1,10 @@
 import pytest
 
-from conftest import ChannelMock, EnvelopeMock, PropertiesMock
+from rabbit.client import AioRabbitClient
+from rabbit.exceptions import AttributeNotInitialized
+from rabbit.job import async_echo_job
+from rabbit.subscribe import Subscribe
+from tests.conftest import ChannelMock, EnvelopeMock, PropertiesMock
 
 PAYLOAD = b'{"a": 1}'
 
@@ -8,6 +12,13 @@ PAYLOAD = b'{"a": 1}'
 @pytest.mark.asyncio
 async def test_configure(subscribe_mock):
     await subscribe_mock.configure()
+
+
+@pytest.mark.asyncio
+async def test_configure_with_client_not_initialized():
+    subscribe = Subscribe(AioRabbitClient(), async_echo_job)
+    with pytest.raises(AttributeNotInitialized):
+        await subscribe.configure()
 
 
 @pytest.mark.asyncio
@@ -38,11 +49,3 @@ async def test_callback(subscribe_mock):
         ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
     )
     assert result is None
-
-
-# @pytest.mark.asyncio
-# async def test_callback_with_publish(subscribe_all):
-#     result = await subscribe_all.callback(
-#         ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
-#     )
-#     assert result is None

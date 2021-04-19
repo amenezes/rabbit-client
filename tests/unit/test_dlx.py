@@ -1,7 +1,7 @@
 import pytest
 
-from conftest import EnvelopeMock, PropertiesMock
 from rabbit.exceptions import OperationError
+from tests.conftest import EnvelopeMock, PropertiesMock
 
 
 @pytest.mark.asyncio
