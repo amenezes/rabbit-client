@@ -4,15 +4,18 @@ VERSION := $(shell cat rabbit/__version__.py | cut -d'"' -f 2)
 lint:
 ifeq ($(SKIP_STYLE), )
 	@echo "> running isort..."
-	isort rabbit --profile black
-	isort tests --profile black
+	isort --profile black rabbit
+	isort --profile black tests
+	isort --profile black setup.py
 	@echo "> running black..."
 	black rabbit
 	black tests
+	black setup.py
 endif
 	@echo "> running flake8..."
 	flake8 rabbit
 	flake8 tests
+	flake8 setup.py
 	@echo "> running mypy..."
 	mypy rabbit
 
@@ -33,7 +36,7 @@ tox:
 	tox -r -p all
 
 about:
-	@echo "> rabbit-client | v$(VERSION)"
+	@echo "> rabbit-client: $(VERSION)"
 	@echo ""
 	@echo "make lint         - Runs: [isort > black > flake8 > mypy]"
 	@echo "make tox          - Runs tox."

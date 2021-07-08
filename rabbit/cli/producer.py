@@ -1,5 +1,7 @@
 import asyncio
 
+from tqdm import tqdm
+
 from rabbit.client import AioRabbitClient
 from rabbit.exchange import Exchange
 from rabbit.publish import Publish
@@ -38,9 +40,12 @@ class Producer:
     def send_event(self):
         publish = self.configure_publish()
         tasks = []
-        for i in range(0, self.qtd):
-            task = self.loop.create_task(publish.send_event(self.payload))
-            tasks.append(task)
-        self.loop.run_until_complete(asyncio.gather(*tasks))
+        with tqdm(total=self.qtd, unit="event", desc="events") as pbar:
+            pbar.set_description("sending events...")
+            for i in range(0, self.qtd):
+                task = self.loop.create_task(publish.send_event(self.payload))
+                tasks.append(task)
+                pbar.update(1)
+            self.loop.run_until_complete(asyncio.gather(*tasks))
         for task in asyncio.all_tasks(self.loop):
             task.cancel()
