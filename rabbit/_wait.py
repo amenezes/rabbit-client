@@ -39,4 +39,4 @@ def constant(
 def _set_timeout(headers, delay: int) -> int:
     if (headers is not None) and ("x-delay" in headers):
         delay = headers["x-delay"]
-    return delay
+    return int(delay)

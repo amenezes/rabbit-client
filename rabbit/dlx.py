@@ -112,11 +112,6 @@ class DLX:
         except AttributeError:
             raise OperationError("Ensure that instance was connected ")
 
-    async def _get_timeout(self, headers, delay: int = 5000) -> int:
-        if (headers is not None) and ("x-delay" in headers):
-            delay = headers["x-delay"]
-        return int(delay) * 5
-
     async def _get_properties(
         self, timeout: int, exception_message: Exception, envelope: Envelope
     ) -> dict:
