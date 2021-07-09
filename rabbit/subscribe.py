@@ -9,7 +9,7 @@ from aioamqp.envelope import Envelope
 from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 
-from rabbit import logger
+from rabbit import constant, logger
 from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
 from rabbit.exceptions import AttributeNotInitialized
@@ -42,6 +42,14 @@ class Subscribe:
     concurrent = attr.ib(
         type=int, default=1, validator=attr.validators.instance_of(int)
     )
+    delay = attr.ib(
+        type=int,
+        default=int(os.getenv("INITIAL_DELAY", 300000)),
+        validator=attr.validators.instance_of(int),
+    )
+    delay_strategy = attr.ib(
+        type=Callable, default=constant, validator=attr.validators.is_callable()
+    )
     _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
     _job_queue = attr.ib(init=False, repr=False)
     _loop = attr.ib(init=False, repr=False)
@@ -59,6 +67,8 @@ class Subscribe:
             ),
             routing_key=self.queue.name,
             exchange=Exchange(name="DLX", exchange_type="direct"),
+            delay_strategy=self.delay_strategy,
+            delay=self.delay,
         )
         self._job_queue = asyncio.Queue(maxsize=self.concurrent)
         self._loop = asyncio.get_event_loop()
