@@ -1,11 +1,12 @@
 import asyncio
 import os
+from typing import Callable
 
 import attr
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
-from rabbit import logger
+from rabbit import constant, logger
 from rabbit.client import AioRabbitClient
 from rabbit.exceptions import AttributeNotInitialized, OperationError
 from rabbit.exchange import Exchange
@@ -36,6 +37,14 @@ class DLX:
         type=str,
         default=os.getenv("SUBSCRIBE_QUEUE", "default.subscribe.queue"),
         validator=attr.validators.instance_of(str),
+    )
+    delay_strategy = attr.ib(
+        type=Callable, default=constant, validator=attr.validators.is_callable()
+    )
+    delay = attr.ib(
+        type=int,
+        default=int(os.getenv("INITIAL_DELAY", 300000)),
+        validator=attr.validators.instance_of(int),
     )
     exchange = attr.ib(
         type=Exchange,
@@ -88,7 +97,7 @@ class DLX:
     async def send_event(
         self, cause: Exception, body: bytes, envelope: Envelope, properties: Properties
     ) -> None:
-        timeout = await self._get_timeout(properties.headers)
+        timeout = self.delay_strategy(properties.headers, self.delay)
         properties = await self._get_properties(timeout, cause, envelope)
 
         logger.debug(f"Timeout: {timeout}")
@@ -102,11 +111,6 @@ class DLX:
             )
         except AttributeError:
             raise OperationError("Ensure that instance was connected ")
-
-    async def _get_timeout(self, headers, delay: int = 5000) -> int:
-        if (headers is not None) and ("x-delay" in headers):
-            delay = headers["x-delay"]
-        return int(delay) * 5
 
     async def _get_properties(
         self, timeout: int, exception_message: Exception, envelope: Envelope

@@ -15,20 +15,6 @@ async def test_ensure_endswith_dlq(dlx, value, expected):
 
 
 @pytest.mark.asyncio
-async def test_get_default_timeout(dlx):
-    result = await dlx._get_timeout(None)
-    assert result == 25000
-
-
-@pytest.mark.asyncio
-async def test_get_cycle_timeout(dlx):
-    values = {1: 5000, 2: 25000, 3: 125000}
-    for i in values.keys():
-        result = await dlx._get_timeout({"x-delay": values.get(i)})
-        assert result == int(values.get(i) * 5)
-
-
-@pytest.mark.asyncio
 async def test_send_event_error_without_client_connection(dlx):
     with pytest.raises(OperationError):
         await dlx.send_event(Exception, bytes(), EnvelopeMock(), PropertiesMock())

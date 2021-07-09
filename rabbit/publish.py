@@ -47,7 +47,6 @@ class Publish:
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
         )
-        await asyncio.sleep(2)
 
     async def send_event(self, payload: bytes, **kwargs) -> None:
         await self._channel.publish(

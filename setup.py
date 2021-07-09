@@ -15,17 +15,21 @@ setuptools.setup(
     description="async rabbit client",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    license='Apache-2.0',
+    license="Apache-2.0",
     url="https://github.com/amenezes/rabbit-client",
     packages=setuptools.find_packages(include=["rabbit", "rabbit.*"]),
-    entry_points={"console_scripts": ["rabbit-client=rabbit.__main__:application.run [cli]"]},
+    entry_points={
+        "console_scripts": ["rabbit-client=rabbit.__main__:application.run [cli]"]
+    },
     include_package_data=True,
-    python_requires='>=3.7.*',
-    project_urls=OrderedDict((
-        ('Documentation', 'https://rabbit-client.amenezes.net'),
-        ('Code', 'https://github.com/amenezes/rabbit-client'),
-        ('Issue tracker', 'https://github.com/amenezes/rabbit-client/issues')
-    )),
+    python_requires=">=3.7.*",
+    project_urls=OrderedDict(
+        (
+            ("Documentation", "https://rabbit-client.amenezes.net"),
+            ("Code", "https://github.com/amenezes/rabbit-client"),
+            ("Issue tracker", "https://github.com/amenezes/rabbit-client/issues"),
+        )
+    ),
     install_requires=[
         "aioamqp>=0.13.0",
         "attrs>=19.1.0",
@@ -46,7 +50,7 @@ setuptools.setup(
         "tox-asdf",
     ],
     extras_require={
-        "cli": ["cleo>=0.8.0"],
+        "cli": ["cleo>=0.8.0", "tqdm"],
         "all": ["cleo>=0.8.0"],
     },
     classifiers=[
