@@ -9,11 +9,11 @@ from rabbit import logger
 from rabbit.exceptions import AttributeNotInitialized
 
 
-@attr.s(slots=True)
+@attr.s(slots=True, repr=False)
 class AioRabbitClient:
-    _protocol = attr.ib(type=AmqpProtocol, init=False, default=None, repr=False)
-    transport = attr.ib(init=False, default=None, repr=False)
-    _event = attr.ib(repr=False, init=False)
+    _protocol = attr.ib(type=AmqpProtocol, init=False, default=None)
+    transport = attr.ib(init=False, default=None)
+    _event = attr.ib(init=False)
 
     def __attrs_post_init__(self):
         self._event = asyncio.Event()

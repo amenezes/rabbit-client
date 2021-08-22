@@ -3,37 +3,23 @@ import asyncio
 from tqdm import tqdm
 
 from rabbit.client import AioRabbitClient
-from rabbit.exchange import Exchange
 from rabbit.publish import Publish
 
 
 class Producer:
     def __init__(
-        self,
-        payload: bytes,
-        qtd: int,
-        name: str,
-        exchange_type: str,
-        topic: str,
+        self, payload: bytes, qtd: int, exchange_name: str, routing_key: str, **kwargs
     ):
         self.loop = asyncio.get_event_loop()
         self.client = AioRabbitClient()
         self.qtd = qtd
         self.payload = payload
-        self.name = name
-        self.exchange_type = exchange_type
-        self.topic = topic
-        self.loop.run_until_complete(self.client.connect())
+        self.exchange_name = exchange_name
+        self.routing_key = routing_key
+        self.loop.run_until_complete(self.client.connect(**kwargs))
 
     def configure_publish(self):
-        publish = Publish(
-            self.client,
-            exchange=Exchange(
-                name=self.name,
-                topic=self.topic,
-                exchange_type=self.exchange_type,
-            ),
-        )
+        publish = Publish(self.client, self.exchange_name, self.routing_key)
         self.loop.run_until_complete(publish.configure())
         return publish
 
