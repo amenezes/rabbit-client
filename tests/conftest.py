@@ -147,12 +147,34 @@ def exchange():
 
 @pytest.fixture
 def dlx(client):
-    return DLX(client)
+    return DLX(
+        client,
+        Exchange(name="dlx", exchange_type="direct"),
+        Exchange(name="dlq_rerouter", exchange_type="topic", topic="queue"),
+        Queue(
+            name="queue",
+            arguments={
+                "x-dead-letter-exchange": "dlq_rerouter",
+                "x-dead-letter-routing-key": "queue",
+            },
+        ),
+    )
 
 
 @pytest.fixture
 def dlx_mock():
-    return DLX(AioRabbitClientMock())
+    return DLX(
+        AioRabbitClientMock(),
+        Exchange(name="dlx", exchange_type="direct"),
+        Exchange(name="dlq_rerouter", exchange_type="topic", topic="queue"),
+        Queue(
+            name="queue",
+            arguments={
+                "x-dead-letter-exchange": "dlq_rerouter",
+                "x-dead-letter-routing-key": "queue",
+            },
+        ),
+    )
 
 
 @pytest.fixture

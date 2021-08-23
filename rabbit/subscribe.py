@@ -17,7 +17,7 @@ from rabbit.exchange import Exchange
 from rabbit.queue import Queue
 
 
-@attr.s(slots=True)
+@attr.s(slots=True, repr=False)
 class Subscribe:
     _client = attr.ib(
         type=AioRabbitClient,
@@ -28,7 +28,7 @@ class Subscribe:
     exchange = attr.ib(
         type=Exchange,
         default=Exchange(
-            name=os.getenv("SUBSCRIBE_EXCHANGE", "default.in.exchange"),
+            name=os.getenv("SUBSCRIBE_EXCHANGE_NAME", "default.in.exchange"),
             exchange_type=os.getenv("SUBSCRIBE_EXCHANGE_TYPE", "topic"),
             topic=os.getenv("SUBSCRIBE_TOPIC", "#"),
         ),
@@ -36,7 +36,9 @@ class Subscribe:
     )
     queue = attr.ib(
         type=Queue,
-        default=Queue(name=os.getenv("SUBSCRIBE_QUEUE", "default.subscribe.queue")),
+        default=Queue(
+            name=os.getenv("SUBSCRIBE_QUEUE_NAME", "default.subscribe.queue")
+        ),
         validator=attr.validators.instance_of(Queue),
     )
     concurrent = attr.ib(
@@ -55,18 +57,30 @@ class Subscribe:
     _loop = attr.ib(init=False, repr=False)
     _channel = attr.ib(init=False, repr=False)
 
+    def __repr__(self) -> str:
+        return f"Subscribe(task={self.task.__name__}, exchange={self.exchange}, queue={self.queue}, concurrent={self.concurrent}, dlx={self._dlx})"
+
     def __attrs_post_init__(self) -> None:
         self._dlx = DLX(
             client=self._client,
+            exchange=Exchange(
+                name=os.getenv("DLX_EXCHANGE_NAME", "DLX"),
+                exchange_type=os.getenv("DLX_TYPE", "direct"),
+            ),
+            dlq_exchange=Exchange(
+                name=os.getenv(
+                    "DLQ_EXCHANGE_NAME", f"dlqReRouter.{self.exchange.name}"
+                ),
+                exchange_type=os.getenv("DLQ_EXCHANGE_TYPE", "topic"),
+                topic=os.getenv("SUBSCRIBE_QUEUE", self.queue.name),
+            ),
             queue=Queue(
                 name=self.queue.name,
                 arguments={
-                    "x-dead-letter-exchange": self.exchange.name,
-                    "x-dead-letter-routing-key": "#",
+                    "x-dead-letter-exchange": f"dlqReRouter.{self.exchange.name}",
+                    "x-dead-letter-routing-key": self.queue.name,
                 },
             ),
-            routing_key=self.queue.name,
-            exchange=Exchange(name="DLX", exchange_type="direct"),
             delay_strategy=self.delay_strategy,
             delay=self.delay,
         )
@@ -81,9 +95,9 @@ class Subscribe:
         self._loop.create_task(self._client.watch(self))
         with suppress(SynchronizationError):
             try:
+                await self._configure_queue()
                 await self._dlx.configure()
                 await self._configure_exchange()
-                await self._configure_queue()
                 await self._configure_queue_bind()
             except AttributeNotInitialized:
                 logger.debug("Waiting client initialization...SUBSCRIBE")
@@ -94,7 +108,7 @@ class Subscribe:
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
         )
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
 
     async def _configure_queue(self) -> None:
         await self._channel.queue_declare(
