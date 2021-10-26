@@ -21,7 +21,7 @@ endif
 
 tests:
 	@echo "> unittest"
-	python -m pytest -v --cov-report xml --cov-report term --cov=rabbit tests
+	python -m pytest -vv --no-cov-on-fail --color=yes --cov-report xml --cov-report term --cov=rabbit tests
 
 docs:
 	@echo "> generate project documentation..."
