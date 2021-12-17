@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := about
-VERSION := $(shell cat rabbit/__version__.py | cut -d'"' -f 2)
+VERSION := $(shell cat rabbit/__init__.py | grep '__version__ ' | cut -d'"' -f 2)
 
 lint:
 ifeq ($(SKIP_STYLE), )

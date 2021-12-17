@@ -1,6 +1,5 @@
 import logging
 
-from .__version__ import __version__
 from ._wait import constant, expo, fibo
 
 logger = logging.getLogger("rabbit-client")
@@ -13,7 +12,9 @@ from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.subscribe import Subscribe
 
+__version__ = "2.1.1"
 __all__ = [
+    "__version__",
     "AioRabbitClient",
     "DLX",
     "Exchange",

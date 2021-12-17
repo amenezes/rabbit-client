@@ -19,9 +19,12 @@ class AioRabbitClient:
         self._event = asyncio.Event()
 
     async def watch(self, item):
+        logger.info("Watch connection enabled.")
         self._event.clear()
         await self._event.wait()
+        logger.error("Connection lost.")
         if not item.__module__.endswith(".dlx"):
+            logger.warning("Trying to establish a new connection...")
             await item.configure()
 
     @property

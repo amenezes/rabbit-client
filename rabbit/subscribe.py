@@ -44,11 +44,6 @@ class Subscribe:
     concurrent = attr.ib(
         type=int, default=1, validator=attr.validators.instance_of(int)
     )
-    delay = attr.ib(
-        type=int,
-        default=int(os.getenv("INITIAL_DELAY", 300000)),
-        validator=attr.validators.instance_of(int),
-    )
     delay_strategy = attr.ib(
         type=Callable, default=constant, validator=attr.validators.is_callable()
     )
@@ -82,7 +77,6 @@ class Subscribe:
                 },
             ),
             delay_strategy=self.delay_strategy,
-            delay=self.delay,
         )
         self._job_queue = asyncio.Queue(maxsize=self.concurrent)
         self._loop = asyncio.get_event_loop()
