@@ -16,10 +16,10 @@ def expo(
     )
     if max_delay:
         max_delay = int(max_delay)
-    computed_delay = _set_timeout(headers, delay)
-    current_delay = int(computed_delay * (base * factor))
-    if max_delay is None or current_delay <= max_delay:
-        return delay
+    current_delay = _set_timeout(headers, delay)
+    delay_updated = int(current_delay * (base * factor))
+    if max_delay is None or delay_updated <= max_delay:
+        return delay_updated
     return int(max_delay)
 
 

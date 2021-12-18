@@ -1,9 +1,9 @@
 import asyncio
 
-from rabbit import logger
 from rabbit.client import AioRabbitClient
 from rabbit.exchange import Exchange
 from rabbit.job import async_chaos_job, async_echo_job
+from rabbit.logger import logger
 from rabbit.queue import Queue
 from rabbit.subscribe import Subscribe
 

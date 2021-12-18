@@ -83,7 +83,7 @@ class Subscribe:
         self._loop = asyncio.get_event_loop()
 
     async def configure(self) -> None:
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
         self._channel = await self._client.get_channel()
         await self.qos(prefetch_count=self.concurrent)
         # self._loop.create_task(self._client.watch(self), name="subscribe_watcher")

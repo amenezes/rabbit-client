@@ -53,6 +53,6 @@ class AioRabbitClient:
                 await self.protocol.wait_closed()
                 self.transport.close()
             except (OSError, aioamqp.exceptions.AmqpClosedConnection) as err:
-                logger.info(f"Error: {err} - Params: {kwargs}")
+                logger.error(f"Error: {err} - Params: {kwargs}")
                 await asyncio.sleep(5)
                 await self.persistent_connect(**kwargs)
