@@ -2,7 +2,7 @@ import asyncio
 import json
 import random
 
-from rabbit import logger
+from .logger import logger
 
 
 async def async_echo_job(data: bytes) -> bytes:

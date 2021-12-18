@@ -9,12 +9,13 @@ from aioamqp.envelope import Envelope
 from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 
-from rabbit import constant, logger
-from rabbit.client import AioRabbitClient
-from rabbit.dlx import DLX
-from rabbit.exceptions import AttributeNotInitialized
-from rabbit.exchange import Exchange
-from rabbit.queue import Queue
+from ._wait import constant
+from .client import AioRabbitClient
+from .dlx import DLX
+from .exceptions import AttributeNotInitialized
+from .exchange import Exchange
+from .logger import logger
+from .queue import Queue
 
 
 @attr.s(slots=True, repr=False)

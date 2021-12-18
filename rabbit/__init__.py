@@ -1,16 +1,10 @@
-import logging
-
 from ._wait import constant, expo, fibo
-
-logger = logging.getLogger("rabbit-client")
-logger.addHandler(logging.NullHandler())
-
-from rabbit.client import AioRabbitClient
-from rabbit.dlx import DLX
-from rabbit.exchange import Exchange
-from rabbit.publish import Publish
-from rabbit.queue import Queue
-from rabbit.subscribe import Subscribe
+from .client import AioRabbitClient
+from .dlx import DLX
+from .exchange import Exchange
+from .publish import Publish
+from .queue import Queue
+from .subscribe import Subscribe
 
 __version__ = "2.1.1"
 __all__ = [

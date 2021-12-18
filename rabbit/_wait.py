@@ -1,6 +1,8 @@
 import os
 from typing import Optional
 
+from .logger import logger
+
 
 def expo(
     headers,
@@ -9,6 +11,9 @@ def expo(
     factor: int = int(os.getenv("EXPO_FACTOR", 1)),
     max_delay: Optional[int] = os.getenv("EXPO_MAX_DELAY"),  # type: ignore
 ) -> int:
+    logger.debug(
+        f"expo delay strategy: [delay={delay}, base={base}, factor={factor}, max_delay={max_delay}]"
+    )
     if max_delay:
         max_delay = int(max_delay)
     computed_delay = _set_timeout(headers, delay)
@@ -23,6 +28,7 @@ def fibo(
     delay: int = int(os.getenv("FIBO_DELAY", 300000)),
     max_delay: int = int(os.getenv("FIBO_MAX_DELAY", 86400000)),
 ) -> int:
+    logger.debug(f"fibo delay strategy: [delay={delay}, max_delay={max_delay}]")
     current_delay = _set_timeout(headers, delay)
     if current_delay < max_delay:
         return int(current_delay + 60000)
@@ -30,6 +36,7 @@ def fibo(
 
 
 def constant(headers, delay: int = int(os.getenv("CONSTANT_DELAY", 300000))) -> int:
+    logger.debug(f"constant delay strategy: [delay={delay}]")
     return _set_timeout(headers, delay)
 
 

@@ -5,8 +5,8 @@ import attr
 from aioamqp.channel import Channel
 from aioamqp.protocol import AmqpProtocol
 
-from rabbit import logger
-from rabbit.exceptions import AttributeNotInitialized
+from .exceptions import AttributeNotInitialized
+from .logger import logger
 
 
 @attr.s(slots=True, repr=False)

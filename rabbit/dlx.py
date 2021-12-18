@@ -5,11 +5,12 @@ import attr
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
-from rabbit import constant, logger
-from rabbit.client import AioRabbitClient
-from rabbit.exceptions import AttributeNotInitialized, OperationError
-from rabbit.exchange import Exchange
-from rabbit.queue import Queue
+from ._wait import constant
+from .client import AioRabbitClient
+from .exceptions import AttributeNotInitialized, OperationError
+from .exchange import Exchange
+from .logger import logger
+from .queue import Queue
 
 
 @attr.s(slots=True, repr=False)
@@ -97,7 +98,6 @@ class DLX:
         timeout = self.delay_strategy(properties.headers)
         properties = await self._get_properties(timeout, cause, envelope)
 
-        logger.debug(f"Timeout: {timeout}")
         logger.debug(
             f"Send event to dlq: [exchange: {self.exchange.name}"
             f" | routing_key: {self.queue.name} | properties: {properties}]"
