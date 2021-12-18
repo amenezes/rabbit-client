@@ -3,7 +3,7 @@ import os
 
 import attr
 
-from rabbit.client import AioRabbitClient
+from .client import AioRabbitClient
 
 
 @attr.s(slots=True)

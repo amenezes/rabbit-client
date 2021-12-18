@@ -56,29 +56,28 @@ def test_fibo_max_delay():
     [
         (300000, 600000),
         (600000, 1200000),
+        (1200000, 2400000),
     ],
 )
 def test_expo_wait(delay, expected):
-    current_delay = expo({"x-delay": delay}, delay)
-    assert current_delay == expected
+    assert expo({"x-delay": delay}, delay) == expected
 
 
 def test_expo():
-    init_delay = 300000
+    delay = 300000
     for it in range(0, 11):
-        current_delay = expo({"x-delay": init_delay}, init_delay)
-        init_delay = init_delay * 2
-        assert current_delay == init_delay
+        current_delay = expo({"x-delay": delay}, delay)
+        delay *= 2
+        assert current_delay == delay
 
 
 def test_expo_without_header():
-    current_delay = expo(None)
-    assert current_delay == 600000
+    assert expo(None) == 600000
 
 
 def test_expo_without_header_with_max_delay():
-    initial_delay = 1
-    for it in range(0, 10):
-        initial_delay = expo(None, initial_delay, max_delay=80)
-        final_delay = initial_delay
-    assert final_delay == 80
+    delay = 1
+    for it in range(10):
+        current_delay = expo(None, delay=delay, max_delay=80)
+        delay += current_delay
+    assert current_delay == 80

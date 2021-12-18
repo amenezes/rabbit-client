@@ -9,12 +9,13 @@ from aioamqp.envelope import Envelope
 from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 
-from rabbit import constant, logger
-from rabbit.client import AioRabbitClient
-from rabbit.dlx import DLX
-from rabbit.exceptions import AttributeNotInitialized
-from rabbit.exchange import Exchange
-from rabbit.queue import Queue
+from ._wait import constant
+from .client import AioRabbitClient
+from .dlx import DLX
+from .exceptions import AttributeNotInitialized
+from .exchange import Exchange
+from .logger import logger
+from .queue import Queue
 
 
 @attr.s(slots=True, repr=False)
@@ -43,11 +44,6 @@ class Subscribe:
     )
     concurrent = attr.ib(
         type=int, default=1, validator=attr.validators.instance_of(int)
-    )
-    delay = attr.ib(
-        type=int,
-        default=int(os.getenv("INITIAL_DELAY", 300000)),
-        validator=attr.validators.instance_of(int),
     )
     delay_strategy = attr.ib(
         type=Callable, default=constant, validator=attr.validators.is_callable()
@@ -82,13 +78,12 @@ class Subscribe:
                 },
             ),
             delay_strategy=self.delay_strategy,
-            delay=self.delay,
         )
         self._job_queue = asyncio.Queue(maxsize=self.concurrent)
         self._loop = asyncio.get_event_loop()
 
     async def configure(self) -> None:
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
         self._channel = await self._client.get_channel()
         await self.qos(prefetch_count=self.concurrent)
         # self._loop.create_task(self._client.watch(self), name="subscribe_watcher")

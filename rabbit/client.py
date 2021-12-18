@@ -5,8 +5,8 @@ import attr
 from aioamqp.channel import Channel
 from aioamqp.protocol import AmqpProtocol
 
-from rabbit import logger
-from rabbit.exceptions import AttributeNotInitialized
+from .exceptions import AttributeNotInitialized
+from .logger import logger
 
 
 @attr.s(slots=True, repr=False)
@@ -19,9 +19,12 @@ class AioRabbitClient:
         self._event = asyncio.Event()
 
     async def watch(self, item):
+        logger.info("Watch connection enabled.")
         self._event.clear()
         await self._event.wait()
+        logger.error("Connection lost.")
         if not item.__module__.endswith(".dlx"):
+            logger.warning("Trying to establish a new connection...")
             await item.configure()
 
     @property
@@ -50,6 +53,6 @@ class AioRabbitClient:
                 await self.protocol.wait_closed()
                 self.transport.close()
             except (OSError, aioamqp.exceptions.AmqpClosedConnection) as err:
-                logger.info(f"Error: {err} - Params: {kwargs}")
+                logger.error(f"Error: {err} - Params: {kwargs}")
                 await asyncio.sleep(5)
                 await self.persistent_connect(**kwargs)

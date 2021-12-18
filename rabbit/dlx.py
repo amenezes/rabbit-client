@@ -1,16 +1,16 @@
 import asyncio
-import os
 from typing import Callable
 
 import attr
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
-from rabbit import constant, logger
-from rabbit.client import AioRabbitClient
-from rabbit.exceptions import AttributeNotInitialized, OperationError
-from rabbit.exchange import Exchange
-from rabbit.queue import Queue
+from ._wait import constant
+from .client import AioRabbitClient
+from .exceptions import AttributeNotInitialized, OperationError
+from .exchange import Exchange
+from .logger import logger
+from .queue import Queue
 
 
 @attr.s(slots=True, repr=False)
@@ -35,15 +35,10 @@ class DLX:
     delay_strategy = attr.ib(
         type=Callable, default=constant, validator=attr.validators.is_callable()
     )
-    delay = attr.ib(
-        type=int,
-        default=int(os.getenv("INITIAL_DELAY", 300000)),
-        validator=attr.validators.instance_of(int),
-    )
     _channel = attr.ib(init=False, repr=False)
 
     def __repr__(self) -> str:
-        return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, delay={self.delay}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
+        return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
 
     async def configure(self) -> None:
         self._channel = await self._client.get_channel()
@@ -100,10 +95,9 @@ class DLX:
     async def send_event(
         self, cause: Exception, body: bytes, envelope: Envelope, properties: Properties
     ) -> None:
-        timeout = self.delay_strategy(properties.headers, self.delay)
+        timeout = self.delay_strategy(properties.headers)
         properties = await self._get_properties(timeout, cause, envelope)
 
-        logger.debug(f"Timeout: {timeout}")
         logger.debug(
             f"Send event to dlq: [exchange: {self.exchange.name}"
             f" | routing_key: {self.queue.name} | properties: {properties}]"
