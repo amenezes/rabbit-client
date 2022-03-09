@@ -3,11 +3,11 @@ import os
 from contextlib import suppress
 from typing import Callable
 
-import attr
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
 from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
+from attrs import field, mutable, validators
 
 from ._wait import constant
 from .client import AioRabbitClient
@@ -18,40 +18,35 @@ from .logger import logger
 from .queue import Queue
 
 
-@attr.s(slots=True, repr=False)
+@mutable
 class Subscribe:
-    _client = attr.ib(
-        type=AioRabbitClient,
-        validator=attr.validators.instance_of(AioRabbitClient),
+    _client: AioRabbitClient = field(
+        validator=validators.instance_of(AioRabbitClient),
         repr=False,
     )
-    task = attr.ib(type=Callable, validator=attr.validators.is_callable())
-    exchange = attr.ib(
-        type=Exchange,
+    task: Callable = field(validator=validators.is_callable())
+    exchange: Exchange = field(
         default=Exchange(
             name=os.getenv("SUBSCRIBE_EXCHANGE_NAME", "default.in.exchange"),
             exchange_type=os.getenv("SUBSCRIBE_EXCHANGE_TYPE", "topic"),
             topic=os.getenv("SUBSCRIBE_TOPIC", "#"),
         ),
-        validator=attr.validators.instance_of(Exchange),
+        validator=validators.instance_of(Exchange),
     )
-    queue = attr.ib(
-        type=Queue,
+    queue: Queue = field(
         default=Queue(
             name=os.getenv("SUBSCRIBE_QUEUE_NAME", "default.subscribe.queue")
         ),
-        validator=attr.validators.instance_of(Queue),
+        validator=validators.instance_of(Queue),
     )
-    concurrent = attr.ib(
-        type=int, default=1, validator=attr.validators.instance_of(int)
+    concurrent: int = field(default=1, validator=validators.instance_of(int))
+    delay_strategy: Callable = field(
+        default=constant, validator=validators.is_callable()
     )
-    delay_strategy = attr.ib(
-        type=Callable, default=constant, validator=attr.validators.is_callable()
-    )
-    _dlx = attr.ib(type=DLX, validator=attr.validators.instance_of(DLX), init=False)
-    _job_queue = attr.ib(init=False, repr=False)
-    _loop = attr.ib(init=False, repr=False)
-    _channel = attr.ib(init=False, repr=False)
+    _dlx: DLX = field(validator=validators.instance_of(DLX), init=False)
+    _job_queue = field(init=False, repr=False)
+    _loop = field(init=False, repr=False)
+    _channel = field(init=False, repr=False)
 
     def __repr__(self) -> str:
         return f"Subscribe(task={self.task.__name__}, exchange={self.exchange}, queue={self.queue}, concurrent={self.concurrent}, dlx={self._dlx})"

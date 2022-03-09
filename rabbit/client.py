@@ -1,25 +1,22 @@
 import asyncio
 
 import aioamqp
-import attr
 from aioamqp.channel import Channel
 from aioamqp.protocol import AmqpProtocol
+from attrs import field, mutable
 
 from .exceptions import AttributeNotInitialized
 from .logger import logger
 
 
-@attr.s(slots=True, repr=False)
+@mutable
 class AioRabbitClient:
-    _protocol = attr.ib(type=AmqpProtocol, init=False, default=None)
-    transport = attr.ib(init=False, default=None)
-    _event = attr.ib(init=False)
-
-    def __attrs_post_init__(self):
-        self._event = asyncio.Event()
+    transport = field(init=False, default=None)
+    _protocol: AmqpProtocol = field(init=False, default=None)
+    _event = field(factory=asyncio.Event)
 
     async def watch(self, item):
-        logger.info("Watch connection enabled.")
+        logger.debug("Watch connection enabled.")
         self._event.clear()
         await self._event.wait()
         logger.error("Connection lost.")
@@ -53,6 +50,8 @@ class AioRabbitClient:
                 await self.protocol.wait_closed()
                 self.transport.close()
             except (OSError, aioamqp.exceptions.AmqpClosedConnection) as err:
-                logger.error(f"Error: {err} - Params: {kwargs}")
+                logger.error(
+                    f"ConnectionError: [error='{err}', host='{kwargs.get('host')}', port={kwargs.get('port')}, login='{kwargs.get('login')}']"
+                )
                 await asyncio.sleep(5)
                 await self.persistent_connect(**kwargs)

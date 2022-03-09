@@ -49,3 +49,7 @@ async def test_callback(subscribe_mock):
         ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
     )
     assert result is None
+
+
+def test_subscribe_repr(subscribe_mock):
+    assert isinstance(repr(subscribe_mock), str)
