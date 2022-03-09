@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from rabbit.client import aioamqp
@@ -19,13 +21,14 @@ async def test_connect(client, monkeypatch):
     assert channel is not None
 
 
-@pytest.mark.skip
-async def test_persistent_connect(client, monkeypatch):
-    monkeypatch.setattr(aioamqp, "connect", aioamqp_mock)
-    await client.persistent_connect()
-
-
 @pytest.mark.asyncio
 async def test_channel_not_initialized(client):
     with pytest.raises(AttributeNotInitialized):
         await client.get_channel()
+
+
+@pytest.mark.asyncio
+async def test_watch(client):
+    loop = asyncio.get_running_loop()
+    loop.create_task(client.watch(client))
+    client.protocol = "xxx"

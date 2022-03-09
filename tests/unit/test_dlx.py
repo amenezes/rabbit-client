@@ -23,3 +23,7 @@ async def test_send_event_error_without_client_connection(dlx):
 @pytest.mark.asyncio
 async def test_configure(dlx_mock):
     await dlx_mock.configure()
+
+
+def test_dlx_repr(dlx):
+    assert isinstance(repr(dlx), str)
