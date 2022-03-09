@@ -5,7 +5,6 @@ from cleo import CommandTester
 
 from rabbit.__main__ import application
 from rabbit.cli.consumer import Consumer
-from rabbit.cli.producer import Producer
 from rabbit.exceptions import AttributeNotInitialized
 from rabbit.job import async_echo_job
 
@@ -21,11 +20,6 @@ def test_file_not_found_event_command():
     ct = CommandTester(command)
     with pytest.raises(SystemExit):
         ct.execute("xxx")
-
-
-def test_producer_connection_error():
-    with pytest.raises(ConnectionRefusedError):
-        Producer(bytes, 1, "exchange_test", "#")
 
 
 def test_consumer_connection_error():
