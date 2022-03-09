@@ -1,12 +1,8 @@
-import attr
+from attrs import field, frozen, validators
 
 
-@attr.s(frozen=True)
+@frozen
 class Queue:
-    name = attr.ib(type=str, validator=attr.validators.instance_of(str))
-    durable = attr.ib(
-        type=bool, default=True, validator=attr.validators.instance_of(bool)
-    )
-    arguments = attr.ib(
-        type=dict, factory=dict, validator=attr.validators.instance_of(dict)
-    )
+    name: str = field(validator=validators.instance_of(str))
+    durable: bool = field(default=True, validator=validators.instance_of(bool))
+    arguments: dict = field(factory=dict, validator=validators.instance_of(dict))

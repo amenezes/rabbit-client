@@ -26,6 +26,17 @@ def test_constant_wait(delay, expected):
         assert current_delay == expected
 
 
+def test_constant_delay_update(monkeypatch):
+    monkeypatch.setenv("CONSTANT_DELAY", "3000")
+    expected = 3000
+    for x in range(0, 11):
+        if x == 5:
+            monkeypatch.setenv("CONSTANT_DELAY", "1000")
+            expected = 1000
+        current_delay = constant({"x-delay": expected})
+        assert current_delay == expected
+
+
 @pytest.mark.parametrize(
     "delay, expected",
     [

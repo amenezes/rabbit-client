@@ -1,29 +1,26 @@
 import asyncio
 import os
 
-import attr
+from attrs import field, mutable, validators
 
 from .client import AioRabbitClient
 
 
-@attr.s(slots=True)
+@mutable
 class Publish:
-    _client = attr.ib(
-        type=AioRabbitClient,
-        validator=attr.validators.instance_of(AioRabbitClient),
+    _client: AioRabbitClient = field(
+        validator=validators.instance_of(AioRabbitClient),
         repr=False,
     )
-    exchange_name = attr.ib(
-        type=str,
+    exchange_name: str = field(
         default=os.getenv("PUBLISH_EXCHANGE_NAME", "default.in.exchange"),
-        validator=attr.validators.instance_of(str),
+        validator=validators.instance_of(str),
     )
-    routing_key = attr.ib(
-        type=str,
+    routing_key: str = field(
         default=os.getenv("PUBLISH_ROUTING_KEY", "#"),
-        validator=attr.validators.instance_of(str),
+        validator=validators.instance_of(str),
     )
-    _channel = attr.ib(init=False, repr=False)
+    _channel = field(init=False, repr=False)
 
     async def configure(self) -> None:
         await asyncio.sleep(1)

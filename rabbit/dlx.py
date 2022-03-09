@@ -1,9 +1,9 @@
 import asyncio
 from typing import Callable
 
-import attr
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
+from attrs import field, mutable, validators
 
 from ._wait import constant
 from .client import AioRabbitClient
@@ -13,29 +13,25 @@ from .logger import logger
 from .queue import Queue
 
 
-@attr.s(slots=True, repr=False)
+@mutable
 class DLX:
-    _client = attr.ib(
-        type=AioRabbitClient,
-        validator=attr.validators.instance_of(AioRabbitClient),
+    _client: AioRabbitClient = field(
+        validator=validators.instance_of(AioRabbitClient),
         repr=False,
     )
-    exchange = attr.ib(
-        type=Exchange,
-        validator=attr.validators.instance_of(Exchange),
+    exchange: Exchange = field(
+        validator=validators.instance_of(Exchange),
     )
-    dlq_exchange = attr.ib(
-        type=Exchange,
-        validator=attr.validators.instance_of(Exchange),
+    dlq_exchange: Exchange = field(
+        validator=validators.instance_of(Exchange),
     )
-    queue = attr.ib(
-        type=Queue,
-        validator=attr.validators.instance_of(Queue),
+    queue: Queue = field(
+        validator=validators.instance_of(Queue),
     )
-    delay_strategy = attr.ib(
-        type=Callable, default=constant, validator=attr.validators.is_callable()
+    delay_strategy: Callable = field(
+        default=constant, validator=validators.is_callable()
     )
-    _channel = attr.ib(init=False, repr=False)
+    _channel = field(init=False, repr=False)
 
     def __repr__(self) -> str:
         return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
