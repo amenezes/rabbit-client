@@ -26,8 +26,7 @@ class Publish:
         await asyncio.sleep(1)
         self._channel = await self._client.get_channel()
         loop = asyncio.get_running_loop()
-        # loop.create_task(self._client.watch(self), name="publish_watcher")
-        loop.create_task(self._client.watch(self))
+        loop.create_task(self._client.watch(self), name="publish_watcher")
 
     async def send_event(self, payload: bytes, **kwargs) -> None:
         await self._channel.publish(
