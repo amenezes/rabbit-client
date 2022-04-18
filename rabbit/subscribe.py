@@ -81,8 +81,7 @@ class Subscribe:
         await asyncio.sleep(3)
         self._channel = await self._client.get_channel()
         await self.qos(prefetch_count=self.concurrent)
-        # self._loop.create_task(self._client.watch(self), name="subscribe_watcher")
-        self._loop.create_task(self._client.watch(self))
+        self._loop.create_task(self._client.watch(self), name="subscribe_watcher")
         with suppress(SynchronizationError):
             try:
                 await self._configure_queue()
@@ -120,7 +119,7 @@ class Subscribe:
     ) -> None:
         if not self._job_queue.full():
             self._job_queue.put_nowait((body, envelope, properties))
-            self._loop.create_task(self._run())
+            self._loop.create_task(self._run(), name="subscribe_task")
         else:
             await self.nack_event(envelope, requeue=True)
             await self._job_queue.join()
