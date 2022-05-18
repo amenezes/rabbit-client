@@ -127,7 +127,7 @@ class Subscribe:
     async def _run(self) -> None:
         try:
             body, envelope, properties = await self._job_queue.get()
-            await self.task(body)
+            await self.task(body, envelope, properties)
             self._job_queue.task_done()
             await self.ack_event(envelope, multiple=False)
         except Exception as cause:
