@@ -1,5 +1,6 @@
 import asyncio
 import os
+from typing import Optional
 
 from attrs import field, mutable, validators
 
@@ -12,14 +13,6 @@ class Publish:
         validator=validators.instance_of(AioRabbitClient),
         repr=False,
     )
-    exchange_name: str = field(
-        default=os.getenv("PUBLISH_EXCHANGE_NAME", "default.in.exchange"),
-        validator=validators.instance_of(str),
-    )
-    routing_key: str = field(
-        default=os.getenv("PUBLISH_ROUTING_KEY", "#"),
-        validator=validators.instance_of(str),
-    )
     _channel = field(init=False, repr=False)
 
     async def configure(self) -> None:
@@ -28,10 +21,20 @@ class Publish:
         loop = asyncio.get_running_loop()
         loop.create_task(self._client.watch(self), name="publish_watcher")
 
-    async def send_event(self, payload: bytes, **kwargs) -> None:
+    async def send_event(
+        self,
+        payload: bytes,
+        exchange_name: Optional[str] = None,
+        routing_key: Optional[str] = None,
+        **kwargs,
+    ) -> None:
+        exchange_name = exchange_name or os.getenv(
+            "PUBLISH_EXCHANGE_NAME", "default.in.exchange"
+        )
+        routing_key = routing_key or os.getenv("PUBLISH_ROUTING_KEY", "#")
         await self._channel.publish(
             payload=payload,
-            exchange_name=self.exchange_name,
-            routing_key=self.routing_key,
+            exchange_name=exchange_name,
+            routing_key=routing_key,
             **kwargs,
         )
