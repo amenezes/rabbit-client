@@ -5,7 +5,7 @@ import sys
 from cleo import Application, Command
 
 from rabbit import __version__
-from rabbit.cli import Consumer, Producer
+from rabbit.cli import Consumer, Publisher
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -71,7 +71,7 @@ class EventCommand(Command):
             self.line(f"<error>File not found: {self.argument('payload')}</error>")
             sys.exit(1)
         try:
-            prod = Producer(
+            prod = Publisher(
                 payload,
                 qtd=int(self.option("events")),
                 exchange_name=os.getenv(

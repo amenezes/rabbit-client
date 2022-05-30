@@ -58,7 +58,7 @@ class DLX:
                 durable=self.dlq_exchange.durable,
             ),
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(1.5)
 
     async def _configure_queue(self) -> None:
         queue_name = await self._ensure_endswith_dlq(self.queue.name)

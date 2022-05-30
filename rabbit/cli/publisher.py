@@ -6,7 +6,7 @@ from rabbit.client import AioRabbitClient
 from rabbit.publish import Publish
 
 
-class Producer:
+class Publisher:
     def __init__(
         self, payload: bytes, qtd: int, exchange_name: str, routing_key: str, **kwargs
     ):

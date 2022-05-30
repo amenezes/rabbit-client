@@ -18,11 +18,10 @@ from .logger import logger
 from .queue import Queue
 
 
-@mutable
+@mutable(repr=False)
 class Subscribe:
     _client: AioRabbitClient = field(
         validator=validators.instance_of(AioRabbitClient),
-        repr=False,
     )
     task: Callable = field(validator=validators.is_callable())
     exchange: Exchange = field(
@@ -44,9 +43,9 @@ class Subscribe:
         default=constant, validator=validators.is_callable()
     )
     _dlx: DLX = field(validator=validators.instance_of(DLX), init=False)
-    _job_queue = field(init=False, repr=False)
-    _loop = field(init=False, repr=False)
-    _channel = field(init=False, repr=False)
+    _job_queue = field(init=False)
+    _loop = field(init=False)
+    _channel = field(init=False)
 
     def __repr__(self) -> str:
         return f"Subscribe(task={self.task.__name__}, exchange={self.exchange}, queue={self.queue}, concurrent={self.concurrent}, dlx={self._dlx})"
@@ -75,10 +74,10 @@ class Subscribe:
             delay_strategy=self.delay_strategy,
         )
         self._job_queue = asyncio.Queue(maxsize=self.concurrent)
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_running_loop()
 
     async def configure(self) -> None:
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
         self._channel = await self._client.get_channel()
         await self.qos(prefetch_count=self.concurrent)
         self._loop.create_task(self._client.watch(self), name="subscribe_watcher")
@@ -97,7 +96,7 @@ class Subscribe:
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(1.5)
 
     async def _configure_queue(self) -> None:
         await self._channel.queue_declare(

@@ -27,7 +27,6 @@ class Consumer:
         self.concurrent = concurrent
 
     async def init(self, task):
-        await asyncio.sleep(1)
         logger.info(f"Using {task.__doc__}")
         subscribe = Subscribe(
             client=self.subscribe_client,

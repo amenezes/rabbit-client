@@ -32,6 +32,7 @@ class AioRabbitClientMock(AioRabbitClient):
 class ChannelMock:
     def __init__(self):
         self.channel = "channel"
+        self.publisher_confirms = False
 
     async def queue_declare(self, *args, **kwargs):
         pass
@@ -60,6 +61,9 @@ class ChannelMock:
     async def basic_reject(self, *args, **kwargs):
         pass
 
+    async def confirm_select(self, *args, **kwargs):
+        self.publisher_confirms = True
+
 
 class TransportMock:
     def __init__(self):
@@ -72,6 +76,7 @@ class TransportMock:
 class ProtocolMock:
     def __init__(self):
         self.protocol = "protocol"
+        self.server_properties = {}
 
     async def channel(self):
         return SubscribeMock()
@@ -123,6 +128,11 @@ class EnvelopeMock(Envelope):
 @pytest.fixture
 def client():
     return AioRabbitClient()
+
+
+@pytest.fixture
+def client_mock():
+    return AioRabbitClientMock()
 
 
 @pytest.fixture
@@ -184,15 +194,17 @@ async def publish_mock():
 
 
 @pytest.fixture
-def subscribe_mock():
-    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job)
+@pytest.mark.asyncio
+async def subscribe_mock(client_mock):
+    return Subscribe(client=client_mock, task=async_echo_job)
 
 
 @pytest.fixture
-def subscribe_dlx(dlx):
-    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job)
+@pytest.mark.asyncio
+async def subscribe_dlx(dlx, client_mock):
+    return Subscribe(client=client_mock, task=async_echo_job)
 
 
 @pytest.fixture
-def subscribe_all(dlx, publish_mock):
-    return Subscribe(client=AioRabbitClientMock(), task=async_echo_job)
+async def subscribe_all(dlx, publish_mock, client_mock):
+    return Subscribe(client=client_mock, task=async_echo_job)
