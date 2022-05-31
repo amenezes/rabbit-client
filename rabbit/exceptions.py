@@ -4,3 +4,7 @@ class AttributeNotInitialized(Exception):
 
 class OperationError(Exception):
     pass
+
+
+class ExchangeNotFound(Exception):
+    pass

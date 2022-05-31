@@ -2,9 +2,11 @@ import asyncio
 import os
 from typing import Optional
 
+from aioamqp.exceptions import ChannelClosed
 from attrs import field, mutable, validators
 
 from .client import AioRabbitClient
+from .exceptions import ExchangeNotFound
 
 
 @mutable(repr=False)
@@ -31,11 +33,13 @@ class Publish:
         except AttributeError:
             return 0
 
-    async def configure(self) -> None:
+    async def configure(self, enable_publish_confirms: bool = False) -> None:
         await asyncio.sleep(1.5)
         self._channel = await self._client.get_channel()
         loop = asyncio.get_running_loop()
         loop.create_task(self._client.watch(self), name="publish_watcher")
+        if enable_publish_confirms:
+            await self.enable_publish_confirms()
 
     async def enable_publish_confirms(self) -> None:
         try:
@@ -56,9 +60,14 @@ class Publish:
             "PUBLISH_EXCHANGE_NAME", "default.in.exchange"
         )
         routing_key = routing_key or os.getenv("PUBLISH_ROUTING_KEY", "#")
-        await self._channel.publish(
-            payload=payload,
-            exchange_name=exchange_name,
-            routing_key=routing_key,
-            **kwargs,
-        )
+        try:
+            await self._channel.publish(
+                payload=payload,
+                exchange_name=exchange_name,
+                routing_key=routing_key,
+                **kwargs,
+            )
+        except ChannelClosed as err:
+            await self.configure(enable_publish_confirms=self.publisher_confirms)
+            if err.message.find("no exchange") > 0:
+                raise ExchangeNotFound(f"Exchange '{exchange_name}' not found")
