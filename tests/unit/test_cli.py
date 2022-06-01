@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from cleo import CommandTester
 
@@ -22,8 +20,8 @@ def test_file_not_found_event_command():
         ct.execute("xxx")
 
 
-def test_consumer_connection_error():
+@pytest.mark.asyncio
+async def test_consumer_connection_error():
     consumer = Consumer("exchange_test", "topic", "#", "queue_test", 1)
-    loop = asyncio.get_event_loop()
     with pytest.raises(AttributeNotInitialized):
-        loop.run_until_complete(consumer.init(async_echo_job))
+        await consumer.init(async_echo_job)
