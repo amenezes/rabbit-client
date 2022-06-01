@@ -21,6 +21,7 @@ class Publish:
 
     @property
     def publisher_confirms(self) -> bool:
+        """Check if publisher_confirms was enable on the channel."""
         try:
             return self._channel.publisher_confirms  # type: ignore
         except AttributeError:
@@ -28,12 +29,14 @@ class Publish:
 
     @property
     def channel_id(self) -> int:
+        """Check the current channel ID."""
         try:
             return self._channel.channel_id  # type: ignore
         except AttributeError:
             return 0
 
     async def configure(self, enable_publish_confirms: bool = False) -> None:
+        """Configure publisher channel."""
         await asyncio.sleep(1.5)
         self._channel = await self._client.get_channel()
         loop = asyncio.get_running_loop()
@@ -42,6 +45,7 @@ class Publish:
             await self.enable_publish_confirms()
 
     async def enable_publish_confirms(self) -> None:
+        """Enables publish_confirms resource on the publisher channel."""
         try:
             if not self._channel.publisher_confirms:
                 await self._channel.confirm_select()
@@ -56,6 +60,7 @@ class Publish:
         routing_key: Optional[str] = None,
         **kwargs,
     ) -> None:
+        """Sends event message to broker."""
         exchange_name = exchange_name or os.getenv(
             "PUBLISH_EXCHANGE_NAME", "default.in.exchange"
         )

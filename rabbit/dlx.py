@@ -37,6 +37,7 @@ class DLX:
         return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
 
     async def configure(self) -> None:
+        """Configure DLX channel, queues and exchange."""
         self._channel = await self._client.get_channel()
         try:
             await self._configure_queue()
@@ -91,6 +92,7 @@ class DLX:
     async def send_event(
         self, cause: Exception, body: bytes, envelope: Envelope, properties: Properties
     ) -> None:
+        """Sent event message to DLX/DLQ."""
         timeout = self.delay_strategy(properties.headers)
         properties = await self._get_properties(timeout, cause, envelope)
 

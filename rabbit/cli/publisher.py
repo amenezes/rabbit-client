@@ -1,6 +1,6 @@
 import asyncio
 
-from tqdm import tqdm
+from rich.progress import track
 
 from rabbit.client import AioRabbitClient
 from rabbit.publish import Publish
@@ -25,17 +25,9 @@ class Publisher:
 
     def send_event(self):
         publish = self.configure_publish()
-        tasks = []
-        with tqdm(total=self.qtd, unit="event", desc="events") as pbar:
-            pbar.set_description("sending events...")
-            for i in range(0, self.qtd):
-                task = self.loop.create_task(
-                    publish.send_event(
-                        self.payload, self.exchange_name, self.routing_key
-                    )
-                )
-                tasks.append(task)
-                pbar.update(1)
-            self.loop.run_until_complete(asyncio.gather(*tasks))
+        for i in track(range(0, self.qtd), description="Sending events"):
+            self.loop.run_until_complete(
+                publish.send_event(self.payload, self.exchange_name, self.routing_key)
+            )
         for task in asyncio.all_tasks(self.loop):
             task.cancel()

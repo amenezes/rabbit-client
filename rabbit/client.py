@@ -35,6 +35,7 @@ class AioRabbitClient:
 
     @property
     def server_properties(self) -> Optional[dict]:
+        """Get server properties from the current connection."""
         try:
             return self.protocol.server_properties  # type: ignore
         except AttributeError:
@@ -59,15 +60,18 @@ class AioRabbitClient:
         self._event.set()
 
     async def get_channel(self) -> Channel:
+        """Get a new channel from current connection."""
         if not self.protocol:
             raise AttributeNotInitialized("Connection not initialized.")
         channel = await self.protocol.channel()
         return channel
 
     async def connect(self, **kwargs) -> None:
+        """Connect to message broker."""
         self.transport, self.protocol = await aioamqp.connect(**kwargs)
 
     async def persistent_connect(self, **kwargs):
+        """Connect to message broker ensuring reconnection in case of error."""
         while True:
             try:
                 self.transport, self.protocol = await aioamqp.connect(**kwargs)
