@@ -11,6 +11,7 @@ def expo(
     factor: Optional[int] = None,
     max_delay: Optional[int] = None,
 ) -> int:
+    """Exponential delay strategy."""
     delay = delay or int(os.getenv("EXPO_DELAY", 300000))
     base = base or int(os.getenv("EXPO_BASE", 2))
     factor = factor = int(os.getenv("EXPO_FACTOR", 1))
@@ -33,6 +34,7 @@ def fibo(
     delay: Optional[int] = None,
     max_delay: Optional[int] = None,
 ) -> int:
+    """Incremental delay strategy."""
     delay = delay or int(os.getenv("FIBO_DELAY", 300000))
     max_delay = max_delay or int(os.getenv("FIBO_MAX_DELAY", 86400000))
 
@@ -46,6 +48,7 @@ def fibo(
 
 
 def constant(headers, delay: Optional[int] = None) -> int:
+    """Constant delay strategy."""
     delay = delay or int(os.getenv("CONSTANT_DELAY", 300000))
     logger.debug(f"constant delay strategy: [delay={delay}]")
     return delay

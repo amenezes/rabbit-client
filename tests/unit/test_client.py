@@ -32,3 +32,17 @@ async def test_watch(client):
     loop = asyncio.get_running_loop()
     loop.create_task(client.watch(client))
     client.protocol = "xxx"
+
+
+def test_client_repr(client):
+    assert (
+        repr(client) == "AioRabbitClient(connected=False, channels=0, max_channels=0)"
+    )
+
+
+def test_server_properties_with_client_not_connected(client):
+    assert client.server_properties is None
+
+
+def test_server_properties(client_mock):
+    assert isinstance(client_mock.server_properties, dict)

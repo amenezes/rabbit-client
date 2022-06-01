@@ -4,7 +4,7 @@ from rabbit.client import AioRabbitClient
 from rabbit.exceptions import AttributeNotInitialized
 from rabbit.job import async_echo_job
 from rabbit.subscribe import Subscribe
-from tests.conftest import ChannelMock, EnvelopeMock, PropertiesMock
+from tests.conftest import EnvelopeMock
 
 PAYLOAD = b'{"a": 1}'
 
@@ -42,14 +42,10 @@ def test_subscribe_with_dlx(dlx, subscribe_dlx):
     assert subscribe_dlx._dlx is not None
 
 
-@pytest.mark.asyncio
-async def test_callback(subscribe_mock):
-    await subscribe_mock.configure()
-    result = await subscribe_mock.callback(
-        ChannelMock(), b'{"key": "value"}', EnvelopeMock(), PropertiesMock()
-    )
-    assert result is None
-
-
 def test_subscribe_repr(subscribe_mock):
     assert isinstance(repr(subscribe_mock), str)
+
+
+async def test_nack_event(subscribe_mock):
+    await subscribe_mock.configure()
+    await subscribe_mock.nack_event(EnvelopeMock())

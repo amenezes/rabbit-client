@@ -16,6 +16,7 @@ rabbit-client provides a simple and automatic configuration to work with:
   - connection and reconnection management with broker;
   - automatic channel configuration;
   - concurrent task execution `[optional]`;
+  - [publisher confirms](https://www.rabbitmq.com/confirms.html#publisher-confirms) `[optional]`;
   - automatic qos configuration;
   - different strategies to delay error events.
 
