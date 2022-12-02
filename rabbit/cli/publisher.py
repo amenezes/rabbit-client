@@ -25,7 +25,7 @@ class Publisher:
 
     def send_event(self):
         publish = self.configure_publish()
-        for i in track(range(0, self.qtd), description="Sending events"):
+        for i in track(range(0, self.qtd), description="📤 Sending events"):
             self.loop.run_until_complete(
                 publish.send_event(self.payload, self.exchange_name, self.routing_key)
             )

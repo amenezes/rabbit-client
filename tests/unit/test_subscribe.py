@@ -9,30 +9,25 @@ from tests.conftest import EnvelopeMock
 PAYLOAD = b'{"a": 1}'
 
 
-@pytest.mark.asyncio
 async def test_configure(subscribe_mock):
     await subscribe_mock.configure()
 
 
-@pytest.mark.asyncio
 async def test_configure_with_client_not_initialized():
     subscribe = Subscribe(AioRabbitClient(), async_echo_job)
     with pytest.raises(AttributeNotInitialized):
         await subscribe.configure()
 
 
-@pytest.mark.asyncio
 async def test_configure_with_dlx(subscribe_dlx):
     await subscribe_dlx.configure()
 
 
-@pytest.mark.asyncio
 async def test_reject_event(subscribe_mock):
     await subscribe_mock.configure()
     await subscribe_mock.reject_event(EnvelopeMock())
 
 
-@pytest.mark.asyncio
 async def test_ack_event(subscribe_mock):
     await subscribe_mock.configure()
     await subscribe_mock.ack_event(EnvelopeMock())

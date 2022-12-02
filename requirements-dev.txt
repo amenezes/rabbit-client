@@ -1,7 +1,6 @@
 -r requirements.txt
 isort
 black
-portray
 pytest
 pytest-asyncio
 pytest-cov
@@ -12,3 +11,4 @@ mypy
 tox
 tox-asdf
 build
+mkdocs-material

@@ -1,26 +1,27 @@
 import pytest
-from cleo import CommandTester
+from click.testing import CliRunner
 
-from rabbit.__main__ import application
+from rabbit.cli import consumer, send_event
 from rabbit.cli.consumer import Consumer
 from rabbit.exceptions import AttributeNotInitialized
 from rabbit.job import async_echo_job
 
 
-def test_consumer_command():
-    command = application.find("consumer")
-    ct = CommandTester(command)
-    assert ct.io.fetch_output() is not None
+@pytest.fixture(scope="session")
+def cli_runner():
+    return CliRunner()
 
 
-def test_file_not_found_event_command():
-    command = application.find("send-event")
-    ct = CommandTester(command)
-    with pytest.raises(SystemExit):
-        ct.execute("xxx")
+def test_consumer_command(cli_runner):
+    result = cli_runner.invoke(consumer, [])
+    assert result.exit_code == 1
 
 
-@pytest.mark.asyncio
+def test_file_not_found_event_command(cli_runner):
+    result = cli_runner.invoke(send_event, [])
+    result.exit_code == 1
+
+
 async def test_consumer_connection_error():
     consumer = Consumer("exchange_test", "topic", "#", "queue_test", 1)
     with pytest.raises(AttributeNotInitialized):
