@@ -1,0 +1,49 @@
+site_name: rabbit-client
+repo_url: https://github.com/amenezes/rabbit-client
+repo_name: amenezes/rabbit-client
+theme:
+  name: material
+  logo: bunny.png
+  favicon: bunny.png
+  features:
+    - navigation.instant
+    - navigation.top
+    - navigation.prune
+    - toc.integrate 
+    - search.highlight
+    - search.suggest
+    - search.share
+    - content.code.annotate
+    - content.tooltips
+    - toc.follow
+  palette:
+    - scheme: default
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/lightbulb
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github-alt
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/amenezes/rabbit-client
+    - icon: fontawesome/solid/bug
+      link: https://github.com/amenezes/rabbit-client/issues
+    - icon: fontawesome/solid/envelope
+      link: mailto:alexandre.fmenezes@gmail.com
+nav:
+- Overview: overview.md
+- Publish-Subscribe: publish-subscribe.md
+- Polling-Publisher: polling-publisher.md
+- Error Strategies: error_strategies.md
+- CLI: command-line.md
+- FAQ: faq.md
+- Development: development.md

@@ -1,4 +1,197 @@
+import logging
+from pathlib import Path
+
+import click
+from rich.console import Console
+from rich.live import Live
+from rich.logging import RichHandler
+from rich.panel import Panel
+from rich.table import Table
+
+from rabbit import __version__
 from rabbit.cli.consumer import Consumer
 from rabbit.cli.publisher import Publisher
 
-__all__ = ["Consumer", "Publisher"]
+CONTEXT_SETTINGS = dict(
+    help_option_names=["-h", "--help"],
+)
+console = Console()
+
+
+@click.group(context_settings=CONTEXT_SETTINGS)
+@click.version_option(version=__version__)
+def cli():
+    pass
+
+
+@cli.command()
+@click.option(
+    "-c",
+    "--concurrent",
+    default=1,
+    show_default=True,
+    help="How many concurrent events to process.",
+)
+@click.option(
+    "-x",
+    "--exchange",
+    default="default.in.exchange",
+    envvar="SUBSCRIBE_EXCHANGE_NAME",
+    show_default=True,
+    help="Exchange name.",
+)
+@click.option(
+    "-t",
+    "--type",
+    default="topic",
+    envvar="SUBSCRIBE_EXCHANGE_TYPE",
+    show_default=True,
+    help="Exchange topic type name.",
+)
+@click.option(
+    "-k",
+    "--key",
+    default="#",
+    envvar="SUBSCRIBE_TOPIC",
+    show_default=True,
+    help="Exchange topic key.",
+)
+@click.option(
+    "-q",
+    "--queue",
+    default="default.subscribe.queue",
+    envvar="SUBSCRIBE_QUEUE_NAME",
+    show_default=True,
+    help="Queue name.",
+)
+@click.option(
+    "--chaos",
+    is_flag=True,
+    help="Enable chaos mode. Raise random Exception to test DLX mechanism.",
+)
+def consumer(concurrent, exchange, type, key, queue, chaos):
+    """Start a consumer sample application 📩"""
+    logging.basicConfig(
+        level="NOTSET",
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(show_path=False)],
+    )
+    with Live(refresh_per_second=1, auto_refresh=False) as live:
+        live.console.print("🚀 Running consumer...")
+        consumer = Consumer(
+            exchange_name=exchange,
+            exchange_type=type,
+            exchange_topic=key,
+            queue_name=queue,
+            concurrent=concurrent,
+        )
+        try:
+            consumer.run(chaos)
+        except KeyboardInterrupt:
+            console.print("🛑 [bold]Consumer successfully completed![bold]")
+        except Exception:
+            raise click.ClickException("💥 Failure to connect to RabbitMQ!")
+
+
+@cli.command()
+@click.argument(
+    "payload",
+    type=click.Path(
+        exists=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        executable=False,
+        path_type=Path,
+    ),
+)
+@click.option(
+    "-e",
+    "--events",
+    default=1,
+    show_default=True,
+    help="How many events to send.",
+)
+@click.option(
+    "-x",
+    "--exchange",
+    envvar="PUBLISH_EXCHANGE_NAME",
+    default="default.in.exchange",
+    show_default=True,
+    help="Exchange name.",
+)
+@click.option(
+    "-k",
+    "--key",
+    envvar="PUBLISH_ROUTING_KEY",
+    default="#",
+    show_default=True,
+    help="Exchange topic key.",
+)
+@click.option("--host", default="localhost", show_default=True, help="RabbitMQ host.")
+@click.option("--port", default=5672, show_default=True, help="RabbitMQ port.")
+@click.option("--login", default="guest", show_default=True, help="RabbitMQ login.")
+@click.option(
+    "--password", default="guest", show_default=True, help="RabbitMQ password."
+)
+@click.option(
+    "--ssl",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Enable rabbit ssl connection.",
+)
+@click.option("--verify", is_flag=True, default=False, help="Verify ssl certificate?")
+@click.option("--channels", default=1, show_default=True, help="Channel max.")
+@click.option("-v", "--verbose", is_flag=True, help="Extend output info.")
+def send_event(
+    payload,
+    events,
+    exchange,
+    key,
+    host,
+    port,
+    login,
+    password,
+    ssl,
+    verify,
+    channels,
+    verbose,
+):
+    """Send a sample message 📤 to Consumer or PollingPublisher"""
+    if verbose:
+        table = Table.grid(padding=(0, 1))
+        table.add_column(style="cyan", justify="right")
+        table.add_column(style="magenta")
+
+        table.add_row("exchange[yellow]:[/yellow] ", exchange)
+        table.add_row("key[yellow]:[/yellow] ", key)
+        table.add_row("events[yellow]:[/yellow] ", f"{events}")
+
+        console.print(
+            Panel(
+                table,
+                title="[bold yellow]sender options[/bold yellow]",
+                border_style="yellow",
+                expand=True,
+            )
+        )
+
+    try:
+        prod = Publisher(
+            payload.read_bytes(),
+            qtd=events,
+            exchange_name=exchange,
+            routing_key=key,
+            host=host,
+            port=port,
+            login=login,
+            password=password,
+            ssl=ssl,
+            verify_ssl=verify,
+            channel_max=channels,
+        )
+        prod.send_event()
+    except OSError:
+        console.print("💥 [bold][red]Failure to connect to RabbitMQ[/red][/bold]")
