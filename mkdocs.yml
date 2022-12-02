@@ -43,7 +43,7 @@ nav:
 - Overview: overview.md
 - Publish-Subscribe: publish-subscribe.md
 - Polling-Publisher: polling-publisher.md
-- Error-Strategies: error-strategies.md
+- Error Strategies: error_strategies.md
 - CLI: command-line.md
 - FAQ: faq.md
 - Development: development.md
