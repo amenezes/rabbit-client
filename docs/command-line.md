@@ -8,97 +8,67 @@ pip install 'rabbit-client[cli]'
 
 ## Usage
 
+`python -m rabbit`
+
 ```bash
-Rabbit Client version 2.0.0
+Usage: python -m rabbit [OPTIONS] COMMAND [ARGS]...
 
-USAGE
-  rabbit-client [-h] [-q] [-v [<...>]] [-V] [--ansi] [--no-ansi] [-n] <command> [<arg1>] ... [<argN>]
+Options:
+  --version   Show the version and exit.
+  -h, --help  Show this message and exit.
 
-ARGUMENTS
-  <command>              The command to execute
-  <arg>                  The arguments of the command
-
-GLOBAL OPTIONS
-  -h (--help)            Display this help message
-  -q (--quiet)           Do not output any message
-  -v (--verbose)         Increase the verbosity of messages: "-v" for normal output, "-vv" for more
-                         verbose output and "-vvv" for debug
-  -V (--version)         Display this application version
-  --ansi                 Force ANSI output
-  --no-ansi              Disable ANSI output
-  -n (--no-interaction)  Do not ask any interactive question
-
-AVAILABLE COMMANDS
-  consumer               Start a consumer sample application 📥
-  help                   Display the manual of a command
-  send-event             Send a sample message 📨 to Consumer or PollingPublisher
+Commands:
+  consumer    Start a consumer sample application 📩
+  send-event  Send a sample message 📤 to Consumer or PollingPublisher
 ```
 
 ### consumer
 
+`python -m rabbit consumer -h`
+
 ```python
-USAGE
-  rabbit-client consumer [-c <...>] [-x <...>] [-t <...>] [-k <...>] [-f <...>] [<chaos>]
+Usage: python -m rabbit consumer [OPTIONS]
 
-ARGUMENTS
-  <chaos>                enable chaos mode. Raise random Exception to test DLX mechanism.
+  Start a consumer sample application 📩
 
-OPTIONS
-  -c (--concurrent)      concurrent events to process. (default: "1")
-  -x (--exchange)        exchange name. (default: "default.in.exchange")
-  -t (--type)            exchange topic type name. (default: "topic")
-  -k (--key)             exchange topic key. (default: "#")
-  -f (--queue)           queue name. (default: "default.subscribe.queue")
-
-GLOBAL OPTIONS
-  -h (--help)            Display this help message
-  -q (--quiet)           Do not output any message
-  -v (--verbose)         Increase the verbosity of messages: "-v" for normal output, "-vv" for more
-                         verbose output and "-vvv" for debug
-  -V (--version)         Display this application version
-  --ansi                 Force ANSI output
-  --no-ansi              Disable ANSI output
-  -n (--no-interaction)  Do not ask any interactive question
+Options:
+  -c, --concurrent INTEGER  How many concurrent events to process.  [default:
+                            1]
+  -x, --exchange TEXT       Exchange name.  [default: default.in.exchange]
+  -t, --type TEXT           Exchange topic type name.  [default: topic]
+  -k, --key TEXT            Exchange topic key.  [default: #]
+  -q, --queue TEXT          Queue name.  [default: default.subscribe.queue]
+  --chaos                   Enable chaos mode. Raise random Exception to test
+                            DLX mechanism.
+  -h, --help                Show this message and exit.
 ```
 
 #### chaos mode
 
-```bash
-python -m rabbit consumer chaos
-```
+`python -m rabbit consumer --chaos`
 
 ### producer/send-event
 
 Send events to message broker.
 
+`python -m rabbit send-event data.json`
+
 ```bash
-USAGE
-  rabbit-client send-event [-e <...>] [-x <...>] [-k <...>] [--host <...>] [--port <...>]
-                           [--login <...>] [--pass <...>] [--ssl] [--verify] [--channels <...>]
-                           <payload>
+Usage: python -m rabbit send-event [OPTIONS] PAYLOAD
 
-ARGUMENTS
-  <payload>              payload file in json format.
+  Send a sample message 📤 to Consumer or PollingPublisher
 
-OPTIONS
-  -e (--events)          qtd events to send. (default: "1")
-  -x (--exchange)        exchange name. (default: "default.in.exchange")
-  -k (--key)             exchange topic key. (default: "#")
-  --host                 rabbit hostname. (default: "localhost")
-  --port                 rabbit port. (default: "5672")
-  --login                rabbit login. (default: "guest")
-  --pass                 rabbit password. (default: "guest")
-  --ssl                  enable rabbit ssl connection.
-  --verify               verify ssl certificate?.
-  --channels             channel max. (default: "1")
-
-GLOBAL OPTIONS
-  -h (--help)            Display this help message
-  -q (--quiet)           Do not output any message
-  -v (--verbose)         Increase the verbosity of messages: "-v" for normal output, "-vv" for more
-                         verbose output and "-vvv" for debug
-  -V (--version)         Display this application version
-  --ansi                 Force ANSI output
-  --no-ansi              Disable ANSI output
-  -n (--no-interaction)  Do not ask any interactive question
+Options:
+  -e, --events INTEGER  How many events to send.  [default: 1]
+  -x, --exchange TEXT   Exchange name.  [default: default.in.exchange]
+  -k, --key TEXT        Exchange topic key.  [default: #]
+  --host TEXT           RabbitMQ host.  [default: localhost]
+  --port INTEGER        RabbitMQ port.  [default: 5672]
+  --login TEXT          RabbitMQ login.  [default: guest]
+  --password TEXT       RabbitMQ password.  [default: guest]
+  --ssl                 Enable rabbit ssl connection.
+  --verify              Verify ssl certificate?
+  --channels INTEGER    Channel max.  [default: 1]
+  -v, --verbose         Extend output info.
+  -h, --help            Show this message and exit.
 ```

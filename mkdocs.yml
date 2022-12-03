@@ -21,7 +21,7 @@ theme:
       primary: deep orange
       accent: amber
       toggle:
-        icon: material/lightbulb
+        icon: material/lightbulb-on
         name: Switch to dark mode
     - scheme: slate
       primary: deep orange
@@ -41,8 +41,8 @@ extra:
       link: mailto:alexandre.fmenezes@gmail.com
 nav:
 - Overview: overview.md
-- Publish-Subscribe: publish-subscribe.md
-- Polling-Publisher: polling-publisher.md
+- Publish Subscribe: publish-subscribe.md
+- Polling Publisher: polling-publisher.md
 - Error Strategies: error_strategies.md
 - CLI: command-line.md
 - FAQ: faq.md
