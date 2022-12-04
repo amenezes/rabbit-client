@@ -69,8 +69,31 @@ def cli():
     is_flag=True,
     help="Enable chaos mode. Raise random Exception to test DLX mechanism.",
 )
-def consumer(concurrent, exchange, type, key, queue, chaos):
+@click.option("-v", "--verbose", is_flag=True, help="Extend output info.")
+def consumer(concurrent, exchange, type, key, queue, chaos, verbose):
     """Start a consumer sample application 📩"""
+    if verbose:
+        table = Table.grid(padding=(0, 1))
+        table.add_column(style="cyan", justify="right")
+        table.add_column(style="magenta")
+
+        table.add_row("exchange[yellow]:[/yellow] ", exchange)
+        table.add_row("type[yellow]:[/yellow] ", type)
+        table.add_row("key[yellow]:[/yellow] ", key)
+        table.add_row("queue[yellow]:[/yellow] ", queue)
+        table.add_row("concurrent[yellow]:[/yellow] ", str(concurrent))
+        table.add_row("chaos mode[yellow]:[/yellow] ", str(chaos))
+        table.add_row("UI[yellow]:[/yellow] ", "http://localhost:15672")
+
+        console.print(
+            Panel(
+                table,
+                title="[bold yellow]consumer options[/bold yellow]",
+                border_style="yellow",
+                expand=True,
+            )
+        )
+
     logging.basicConfig(
         level="NOTSET",
         format="%(message)s",
@@ -99,7 +122,7 @@ def consumer(concurrent, exchange, type, key, queue, chaos):
     "payload",
     type=click.Path(
         exists=True,
-        dir_okay=False,
+        dir_okay=True,
         writable=False,
         readable=True,
         executable=False,
@@ -165,6 +188,9 @@ def send_event(
         table.add_column(style="cyan", justify="right")
         table.add_column(style="magenta")
 
+        table.add_row(
+            "amqp_URI[yellow]:[/yellow] ", f"amqp://{login}:***@{host}:{port}"
+        )
         table.add_row("exchange[yellow]:[/yellow] ", exchange)
         table.add_row("key[yellow]:[/yellow] ", key)
         table.add_row("events[yellow]:[/yellow] ", f"{events}")
@@ -179,9 +205,7 @@ def send_event(
         )
 
     try:
-        prod = Publisher(
-            payload.read_bytes(),
-            qtd=events,
+        publish = Publisher(
             exchange_name=exchange,
             routing_key=key,
             host=host,
@@ -192,6 +216,11 @@ def send_event(
             verify_ssl=verify,
             channel_max=channels,
         )
-        prod.send_event()
+        if payload.is_file():
+            publish.send_event(payload.read_bytes(), events, payload.name)
+        elif payload.is_dir():
+            for f in payload.glob("*.json"):
+                publish.send_event(f.read_bytes(), events, f.name)
+
     except OSError:
         console.print("💥 [bold][red]Failure to connect to RabbitMQ[/red][/bold]")
