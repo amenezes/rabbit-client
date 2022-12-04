@@ -223,4 +223,4 @@ def send_event(
                 publish.send_event(f.read_bytes(), events, f.name)
 
     except OSError:
-        console.print("💥 [bold][red]Failure to connect to RabbitMQ[/red][/bold]")
+        raise click.ClickException("💥 Failure to connect to RabbitMQ!")
