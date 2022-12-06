@@ -8,9 +8,12 @@ pip install 'rabbit-client[cli]'
 
 ## Usage
 
-`python -m rabbit`
+```bash
+python -m rabbit
+```
 
 ```bash
+# expected output
 Usage: python -m rabbit [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -24,9 +27,12 @@ Commands:
 
 ### consumer
 
-`python -m rabbit consumer -h`
+```bash
+python -m rabbit consumer -h
+```
 
-```python
+```bash
+# expected output
 Usage: python -m rabbit consumer [OPTIONS]
 
   Start a consumer sample application 📩
@@ -43,17 +49,24 @@ Options:
   -h, --help                Show this message and exit.
 ```
 
-#### chaos mode
+#### chaos mode 🔥
 
-`python -m rabbit consumer --chaos`
+```bash
+python -m rabbit consumer --chaos
+```
 
 ### producer/send-event
 
 Send events to message broker.
 
-`python -m rabbit send-event data.json`
+```bash
+python -m rabbit send-event data.json
+```
+
+> `PAYLOAD` argument can be some `file` or `directory` with a list of json files.
 
 ```bash
+# expected output
 Usage: python -m rabbit send-event [OPTIONS] PAYLOAD
 
   Send a sample message 📤 to Consumer or PollingPublisher
