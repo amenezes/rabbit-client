@@ -48,7 +48,7 @@ make tests
 
 ## Tox
 
-Run `Lint` and `Tests` on python: `3.8`, `3.9` and `3.10`
+Run `Lint` and `Tests` in python: `3.8`, `3.9`, `3.10` and `3.11`.
 
 ```bash
 make tox
