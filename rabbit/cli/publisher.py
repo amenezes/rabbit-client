@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 from rich.progress import track
 
@@ -14,7 +13,6 @@ class Publisher:
         self.exchange_name = exchange_name
         self.routing_key = routing_key
         self.loop.run_until_complete(self.client.connect(**kwargs))
-        time.sleep(0.5)
         self.publish = self.configure_publish()
 
     def configure_publish(self) -> Publish:

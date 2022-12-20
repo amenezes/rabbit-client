@@ -84,12 +84,19 @@ class Subscribe:
         self._loop.create_task(self._client.watch(self), name="subscribe_watcher")
         with suppress(SynchronizationError):
             try:
-                await self._configure_queue()
-                await self._dlx.configure()
-                await self._configure_exchange()
-                await self._configure_queue_bind()
+                await asyncio.gather(
+                    self._configure_queue(),
+                    self._dlx.configure(),
+                    self._configure_exchange(),
+                    self._configure_queue_bind(),
+                )
             except AttributeNotInitialized:
                 logger.debug("Waiting client initialization...SUBSCRIBE")
+
+    async def _configure_queue(self) -> None:
+        await self._channel.queue_declare(
+            queue_name=self.queue.name, durable=self.queue.durable
+        )
 
     async def _configure_exchange(self) -> None:
         await self._channel.exchange_declare(
@@ -97,14 +104,9 @@ class Subscribe:
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
         )
-        await asyncio.sleep(1.5)
-
-    async def _configure_queue(self) -> None:
-        await self._channel.queue_declare(
-            queue_name=self.queue.name, durable=self.queue.durable
-        )
 
     async def _configure_queue_bind(self) -> None:
+        await asyncio.sleep(1.5)
         await self._channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,

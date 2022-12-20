@@ -62,7 +62,7 @@ class AioRabbitClient:
     async def get_channel(self) -> Channel:
         """Get a new channel from current connection."""
         if not self.protocol:
-            raise AttributeNotInitialized("Connection not initialized.")
+            raise AttributeNotInitialized
         channel = await self.protocol.channel()
         return channel
 

@@ -40,11 +40,21 @@ class DLX:
         """Configure DLX channel, queues and exchange."""
         self._channel = await self._client.get_channel()
         try:
-            await self._configure_queue()
-            await self._configure_exchange()
-            await self._configure_queue_bind()
+            await asyncio.gather(
+                self._configure_queue(),
+                self._configure_exchange(),
+                self._configure_queue_bind(),
+            )
         except AttributeNotInitialized:
             logger.debug("Waiting client initialization...DLX")
+
+    async def _configure_queue(self) -> None:
+        queue_name = await self._ensure_endswith_dlq(self.queue.name)
+        await self._channel.queue_declare(
+            queue_name=queue_name,
+            durable=self.queue.durable,
+            arguments=self.queue.arguments,
+        )
 
     async def _configure_exchange(self) -> None:
         await asyncio.gather(
@@ -59,18 +69,10 @@ class DLX:
                 durable=self.dlq_exchange.durable,
             ),
         )
-        await asyncio.sleep(1.5)
-
-    async def _configure_queue(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.queue.name)
-        await self._channel.queue_declare(
-            queue_name=queue_name,
-            durable=self.queue.durable,
-            arguments=self.queue.arguments,
-        )
 
     async def _configure_queue_bind(self) -> None:
         queue_name = await self._ensure_endswith_dlq(self.queue.name)
+        await asyncio.sleep(1.5)
         await asyncio.gather(
             self._channel.queue_bind(
                 exchange_name=self.exchange.name,
@@ -105,7 +107,7 @@ class DLX:
                 body, self.exchange.name, self.queue.name, properties
             )
         except AttributeError:
-            raise OperationError("Ensure that instance was connected ")
+            raise OperationError
 
     async def _get_properties(
         self, timeout: int, exception_message: Exception, envelope: Envelope

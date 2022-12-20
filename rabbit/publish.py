@@ -75,4 +75,4 @@ class Publish:
         except ChannelClosed as err:
             await self.configure(enable_publish_confirms=self.publisher_confirms)
             if err.message.find("no exchange") > 0:
-                raise ExchangeNotFound(f"Exchange '{exchange_name}' not found")
+                raise ExchangeNotFound(exchange_name)  # type: ignore

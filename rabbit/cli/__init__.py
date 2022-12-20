@@ -11,6 +11,7 @@ from rich.table import Table
 from rabbit import __version__
 from rabbit.cli.consumer import Consumer
 from rabbit.cli.publisher import Publisher
+from rabbit.logger import logger
 
 CONTEXT_SETTINGS = dict(
     help_option_names=["-h", "--help"],
@@ -113,7 +114,8 @@ def consumer(concurrent, exchange, type, key, queue, chaos, verbose):
             consumer.run(chaos)
         except KeyboardInterrupt:
             console.print("🛑 [bold]Consumer successfully completed![bold]")
-        except Exception:
+        except Exception as err:
+            logger.error(f"{err}")
             raise click.ClickException("💥 Failure to connect to RabbitMQ!")
 
 
