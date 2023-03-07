@@ -39,8 +39,9 @@ class Publish:
         """Configure publisher channel."""
         await asyncio.sleep(1.5)
         self._channel = await self._client.get_channel()
-        loop = asyncio.get_running_loop()
-        loop.create_task(self._client.watch(self), name="publish_watcher")
+        await self._client.watch(self, "publish_watcher")
+        # loop = asyncio.get_running_loop()
+        # loop.create_task(self._client.watch(self), name="publish_watcher")
         if enable_publish_confirms:
             await self.enable_publish_confirms()
 

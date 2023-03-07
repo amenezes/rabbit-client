@@ -16,6 +16,7 @@ class AioRabbitClientMock(AioRabbitClient):
         self._protocol = ProtocolMock()
         self.transport = TransportMock()
         self._app = kwargs.get("app")
+        self._background_tasks = set()
 
     @property
     def protocol(self):

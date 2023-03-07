@@ -33,7 +33,8 @@ async def test_watch(client):
 
 def test_client_repr(client):
     assert (
-        repr(client) == "AioRabbitClient(connected=False, channels=0, max_channels=0)"
+        repr(client)
+        == "AioRabbitClient(connected=False, channels=0, max_channels=0, background_tasks=[])"
     )
 
 

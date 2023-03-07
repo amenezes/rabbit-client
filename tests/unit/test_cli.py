@@ -23,6 +23,16 @@ def test_file_not_found_event_command(cli_runner):
 
 
 async def test_consumer_connection_error():
-    consumer = Consumer("exchange_test", "topic", "#", "queue_test", 1)
+    consumer = Consumer(
+        "localhost",
+        5672,
+        "guest",
+        "guest",
+        "exchange_test",
+        "topic",
+        "#",
+        "queue_test",
+        1,
+    )
     with pytest.raises(AttributeNotInitialized):
         await consumer.init(async_echo_job)

@@ -26,6 +26,30 @@ def cli():
 
 @cli.command()
 @click.option(
+    "--host",
+    default="localhost",
+    show_default=True,
+    help="RabbitMQ hostname.",
+)
+@click.option(
+    "--port",
+    default="5672",
+    show_default=True,
+    help="RabbitMQ port.",
+)
+@click.option(
+    "--login",
+    default="guest",
+    show_default=True,
+    help="RabbitMQ username.",
+)
+@click.option(
+    "--password",
+    default="guest",
+    show_default=True,
+    help="RabbitMQ username.",
+)
+@click.option(
     "-c",
     "--concurrent",
     default=1,
@@ -70,13 +94,16 @@ def cli():
     help="Enable chaos mode. Raise random Exception to test DLX mechanism.",
 )
 @click.option("-v", "--verbose", is_flag=True, help="Extend output info.")
-def consumer(concurrent, exchange, type, key, queue, chaos, verbose):
+def consumer(
+    host, port, login, password, concurrent, exchange, type, key, queue, chaos, verbose
+):
     """Start a consumer sample application 📩"""
     if verbose:
         table = Table.grid(padding=(0, 1))
         table.add_column(style="cyan", justify="right")
         table.add_column(style="magenta")
 
+        table.add_row("connection[yellow]:[/yellow] ", f"{login}:***@{host}:{port}")
         table.add_row("exchange[yellow]:[/yellow] ", exchange)
         table.add_row("type[yellow]:[/yellow] ", type)
         table.add_row("key[yellow]:[/yellow] ", key)
@@ -103,6 +130,10 @@ def consumer(concurrent, exchange, type, key, queue, chaos, verbose):
     with Live(refresh_per_second=1, auto_refresh=False) as live:
         live.console.print("🚀 Running consumer...")
         consumer = Consumer(
+            host=host,
+            port=port,
+            login=login,
+            password=password,
             exchange_name=exchange,
             exchange_type=type,
             exchange_topic=key,
@@ -113,8 +144,8 @@ def consumer(concurrent, exchange, type, key, queue, chaos, verbose):
             consumer.run(chaos)
         except KeyboardInterrupt:
             console.print("🛑 [bold]Consumer successfully completed![bold]")
-        except Exception:
-            raise click.ClickException("💥 Failure to connect to RabbitMQ!")
+        except Exception as err:
+            raise click.ClickException(f"💥 {err}")
 
 
 @cli.command()

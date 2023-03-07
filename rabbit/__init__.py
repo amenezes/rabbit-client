@@ -6,7 +6,7 @@ from .publish import Publish
 from .queue import Queue
 from .subscribe import Subscribe
 
-__version__ = "2.9.0"
+__version__ = "2.9.1"
 __all__ = [
     "__version__",
     "AioRabbitClient",

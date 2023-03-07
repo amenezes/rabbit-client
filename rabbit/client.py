@@ -15,6 +15,7 @@ class AioRabbitClient:
     transport = field(init=False, default=None)
     _protocol: AmqpProtocol = field(init=False, default=None)
     _event = field(factory=asyncio.Event)
+    _background_tasks: set = field(factory=set)
 
     def __repr__(self) -> str:
         try:
@@ -31,7 +32,8 @@ class AioRabbitClient:
             connected = self.transport._protocol_connected
         except AttributeError:
             connected = False
-        return f"AioRabbitClient(connected={connected}, channels={channels}, max_channels={max_channels})"
+        tasks = [t.get_name() for t in self._background_tasks]
+        return f"AioRabbitClient(connected={connected}, channels={channels}, max_channels={max_channels}, background_tasks={tasks})"
 
     @property
     def server_properties(self) -> Optional[dict]:
@@ -41,7 +43,7 @@ class AioRabbitClient:
         except AttributeError:
             return None
 
-    async def watch(self, item):
+    async def register_watch(self, item) -> None:
         logger.debug("Watch connection enabled.")
         self._event.clear()
         await self._event.wait()
@@ -49,6 +51,11 @@ class AioRabbitClient:
         if not item.__module__.endswith(".dlx"):
             logger.warning("Trying to establish a new connection...")
             await item.configure()
+
+    async def watch(self, item, name: Optional[str] = None):
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(self.register_watch(item), name=name)
+        self._background_tasks.add(task)
 
     @property
     def protocol(self) -> AmqpProtocol:

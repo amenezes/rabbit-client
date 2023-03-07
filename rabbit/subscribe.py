@@ -81,7 +81,7 @@ class Subscribe:
         await asyncio.sleep(2)
         self._channel = await self._client.get_channel()
         await self.qos(prefetch_count=self.concurrent)
-        self._loop.create_task(self._client.watch(self), name="subscribe_watcher")
+        await self._client.watch(self, "subscribe_watcher")
         with suppress(SynchronizationError):
             try:
                 await self._configure_queue()
