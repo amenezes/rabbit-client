@@ -6,6 +6,7 @@ from aioamqp.channel import Channel
 from aioamqp.protocol import AmqpProtocol
 from attrs import field, mutable
 
+from .background_tasks import BackgroundTasks
 from .exceptions import AttributeNotInitialized
 from .logger import logger
 
@@ -15,7 +16,7 @@ class AioRabbitClient:
     transport = field(init=False, default=None)
     _protocol: AmqpProtocol = field(init=False, default=None)
     _event = field(factory=asyncio.Event)
-    _background_tasks: set = field(factory=set)
+    _background_tasks: BackgroundTasks = field(factory=BackgroundTasks)
 
     def __repr__(self) -> str:
         try:
@@ -32,8 +33,8 @@ class AioRabbitClient:
             connected = self.transport._protocol_connected
         except AttributeError:
             connected = False
-        tasks = [t.get_name() for t in self._background_tasks]
-        return f"AioRabbitClient(connected={connected}, channels={channels}, max_channels={max_channels}, background_tasks={tasks})"
+        tasks_name = [t.get_name() for t in self._background_tasks]
+        return f"AioRabbitClient(connected={connected}, channels={channels}, max_channels={max_channels}, background_tasks={tasks_name})"
 
     @property
     def server_properties(self) -> Optional[dict]:
@@ -43,8 +44,8 @@ class AioRabbitClient:
         except AttributeError:
             return None
 
-    async def register_watch(self, item) -> None:
-        logger.debug("Watch connection enabled.")
+    async def watch(self, item) -> None:
+        logger.debug("Watch connection enabled")
         self._event.clear()
         await self._event.wait()
         logger.error("Connection lost")
@@ -52,10 +53,18 @@ class AioRabbitClient:
             logger.warning("Trying to establish a new connection...")
             await item.configure()
 
-    async def watch(self, item, name: Optional[str] = None):
+    async def _watch_channel_state(self, item, *args, **kwargs) -> None:
+        while True:
+            await asyncio.sleep(5)
+            if not item.channel.is_open:
+                await item.channel.open()
+                await item.configure(item.channel, *args, **kwargs)
+
+    async def register_watch(self, name: str, task, *args, **kwargs) -> None:
         loop = asyncio.get_running_loop()
-        task = loop.create_task(self.register_watch(item), name=name)
-        self._background_tasks.add(task)
+        task = loop.create_task(task(*args, **kwargs), name=name)
+        self._background_tasks.add(name, task)
+        task.add_done_callback(self._background_tasks.discard)
 
     @property
     def protocol(self) -> AmqpProtocol:

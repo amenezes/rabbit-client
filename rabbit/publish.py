@@ -2,6 +2,7 @@ import asyncio
 import os
 from typing import Optional
 
+from aioamqp.channel import Channel
 from aioamqp.exceptions import ChannelClosed
 from attrs import field, mutable, validators
 
@@ -14,7 +15,7 @@ class Publish:
     _client: AioRabbitClient = field(
         validator=validators.instance_of(AioRabbitClient),
     )
-    _channel = field(init=False)
+    _channel: Channel = field(init=False)
 
     def __repr__(self) -> str:
         return f"Publish(channel_id={self.channel_id}, publisher_confirms={self.publisher_confirms})"
@@ -23,7 +24,7 @@ class Publish:
     def publisher_confirms(self) -> bool:
         """Check if publisher_confirms was enable on the channel."""
         try:
-            return self._channel.publisher_confirms  # type: ignore
+            return self.channel.publisher_confirms  # type: ignore
         except AttributeError:
             return False
 
@@ -31,27 +32,47 @@ class Publish:
     def channel_id(self) -> int:
         """Check the current channel ID."""
         try:
-            return self._channel.channel_id  # type: ignore
+            return self.channel.channel_id  # type: ignore
         except AttributeError:
             return 0
 
-    async def configure(self, enable_publish_confirms: bool = False) -> None:
+    @property
+    def channel(self) -> Channel:
+        return self._channel
+
+    @channel.setter
+    def channel(self, channel: Channel) -> None:
+        self._channel = channel
+
+    async def configure(
+        self, channel: Optional[Channel] = None, enable_publish_confirms: bool = False
+    ) -> None:
         """Configure publisher channel."""
         await asyncio.sleep(1.5)
-        self._channel = await self._client.get_channel()
-        await self._client.watch(self, "publish_watcher")
-        # loop = asyncio.get_running_loop()
-        # loop.create_task(self._client.watch(self), name="publish_watcher")
+        if channel is None:
+            self.channel = await self._client.get_channel()
+            await self._client.register_watch(
+                "publish-watcher", self._client.watch, self
+            )
+            await self._client.register_watch(
+                "publish-channel-watcher",
+                self._client._watch_channel_state,
+                self,
+                enable_publish_confirms,
+            )
+        else:
+            self.channel = channel
+
         if enable_publish_confirms:
             await self.enable_publish_confirms()
 
     async def enable_publish_confirms(self) -> None:
         """Enables publish_confirms resource on the publisher channel."""
         try:
-            if not self._channel.publisher_confirms:
-                await self._channel.confirm_select()
+            if not self.channel.publisher_confirms:
+                await self.channel.confirm_select()
         except AttributeError:
-            self._channel = await self._client.get_channel()
+            self.channel = await self._client.get_channel()
             await self.enable_publish_confirms()
 
     async def send_event(
@@ -67,7 +88,7 @@ class Publish:
         )
         routing_key = routing_key or os.getenv("PUBLISH_ROUTING_KEY", "#")
         try:
-            await self._channel.publish(
+            await self.channel.publish(
                 payload=payload,
                 exchange_name=exchange_name,
                 routing_key=routing_key,

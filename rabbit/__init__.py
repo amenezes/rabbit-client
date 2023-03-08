@@ -5,11 +5,13 @@ from .exchange import Exchange
 from .publish import Publish
 from .queue import Queue
 from .subscribe import Subscribe
+from .background_tasks import BackgroundTasks
 
 __version__ = "2.9.1"
 __all__ = [
     "__version__",
     "AioRabbitClient",
+    "BackgroundTasks",
     "DLX",
     "Exchange",
     "Queue",

@@ -141,7 +141,7 @@ def consumer(
             concurrent=concurrent,
         )
         try:
-            consumer.run(chaos)
+            consumer.run(chaos, verbose)
         except KeyboardInterrupt:
             console.print("🛑 [bold]Consumer successfully completed![bold]")
         except Exception as err:

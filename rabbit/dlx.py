@@ -1,6 +1,7 @@
 import asyncio
-from typing import Callable
+from typing import Callable, Optional
 
+from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 from attrs import field, mutable, validators
@@ -36,9 +37,13 @@ class DLX:
     def __repr__(self) -> str:
         return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
 
-    async def configure(self) -> None:
+    async def configure(self, channel: Optional[Channel] = None) -> None:
         """Configure DLX channel, queues and exchange."""
-        self._channel = await self._client.get_channel()
+        if channel is None:
+            self._channel = await self._client.get_channel()
+        else:
+            self._channel = channel
+
         try:
             await self._configure_queue()
             await self._configure_exchange()

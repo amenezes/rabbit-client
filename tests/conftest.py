@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
@@ -9,6 +11,7 @@ from rabbit.job import async_echo_job
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.subscribe import Subscribe
+from rabbit.background_tasks import BackgroundTasks
 
 
 class AioRabbitClientMock(AioRabbitClient):
@@ -16,7 +19,8 @@ class AioRabbitClientMock(AioRabbitClient):
         self._protocol = ProtocolMock()
         self.transport = TransportMock()
         self._app = kwargs.get("app")
-        self._background_tasks = set()
+        self._background_tasks = BackgroundTasks()
+        self._event = asyncio.Event()
 
     @property
     def protocol(self):
@@ -127,13 +131,15 @@ class EnvelopeMock(Envelope):
 
 
 @pytest.fixture
-def client():
+async def client():
     return AioRabbitClient()
 
-
 @pytest.fixture
-def client_mock():
-    return AioRabbitClientMock()
+async def client_mock():
+    mock_client = AioRabbitClientMock()
+    yield mock_client
+    # for task in asyncio.all_tasks():
+    #     task.cancel()
 
 
 @pytest.fixture
@@ -141,13 +147,13 @@ async def subscribe(client):
     return Subscribe(client=client)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def queue():
     return Queue(name="queue")
 
 
 @pytest.fixture
-def publish(client):
+async def publish(client):
     return Publish(client=client)
 
 
@@ -157,7 +163,7 @@ def exchange():
 
 
 @pytest.fixture
-def dlx(client):
+async def dlx(client):
     return DLX(
         client,
         Exchange(name="dlx", exchange_type="direct"),
@@ -173,7 +179,7 @@ def dlx(client):
 
 
 @pytest.fixture
-def dlx_mock():
+async def dlx_mock():
     return DLX(
         AioRabbitClientMock(),
         Exchange(name="dlx", exchange_type="direct"),
