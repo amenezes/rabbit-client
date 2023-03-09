@@ -26,7 +26,7 @@ class BackgroundTasks:
 
         if name not in self.tasks_by_name():
             logger.debug(f"Registering task: '{name}'")
-            task_runner = loop.create_task(awt(*args, **kwargs))
+            task_runner = loop.create_task(awt(*args, **kwargs), name=name)
             task_runner.add_done_callback(self.discard)
             self._tasks.update({name: task_runner})
 

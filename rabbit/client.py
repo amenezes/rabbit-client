@@ -1,5 +1,6 @@
 import asyncio
 from typing import List, Optional
+from uuid import uuid4
 
 import aioamqp
 from aioamqp.channel import Channel
@@ -105,17 +106,17 @@ class AioRabbitClient:
                     pass
 
     async def register(self, item) -> None:
-        await asyncio.sleep(1.25)
         self._items.append(item)
+        task_id = uuid4().hex
         item.channel = await self.get_channel()
         await item.configure()
         await self.register_watch(
-            f"{item.name}-watch-connection-state-{len(self._items)}",
+            f"{item.name}-watch-connection-state-{task_id}",
             self.watch_connection_state,
             item,
         )
         await self.register_watch(
-            f"{item.name}-watch-channel-state-{len(self._items)}",
+            f"{item.name}-watch-channel-state-{task_id}",
             self.watch_channel_state,
             item,
         )
