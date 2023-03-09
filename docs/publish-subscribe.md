@@ -13,8 +13,7 @@ All code examples can be used in the python asyncio REPL: `python -m asyncio` av
 ```python
 import logging
 
-from rabbit.client import AioRabbitClient
-from rabbit.subscribe import Subscribe
+from rabbit import AioRabbitClient, Subscribe
 from rabbit.job import async_chaos_job
 
 
@@ -22,10 +21,10 @@ logging.basicConfig(level=logging.INFO)
 
 
 client = AioRabbitClient()
-asyncio.create_task(client.persistent_connect())
+asyncio.create_task(client.persistent_connect(host='localhost', port=5672))
 
-subscribe = Subscribe(client, concurrent=5, task=async_chaos_job)
-asyncio.create_task(subscribe.configure())
+subscribe = Subscribe(concurrent=5, task=async_chaos_job)
+await client.register(subscribe)
 ```
 
 ### Publisher
@@ -41,8 +40,7 @@ python -m rabbit send-event data.json
 ```python
 import logging
 
-from rabbit.client import AioRabbitClient
-from rabbit.publish import Publish
+from rabbit import AioRabbitClient, Publish
 
 
 logging.basicConfig(level=logging.INFO)
@@ -51,8 +49,10 @@ logging.basicConfig(level=logging.INFO)
 client = AioRabbitClient()
 asyncio.create_task(client.persistent_connect())
 
-publish = Publish(client)
-await publish.configure()
+publish = Publish()
+# publish = Publish(True) # for enable publish_confirms
+
+await client.register(publish)
 await publish.send_event('{"document": 1, "description": "123", "pages": ["abc", "def", "ghi"]}'.encode('utf8'))
 ```
  

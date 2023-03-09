@@ -5,9 +5,7 @@ import random
 from .logger import logger
 
 
-async def async_echo_job(
-    data: bytes, skip_wait: bool = False, *args, **kwargs
-) -> bytes:
+async def async_echo_job(data: bytes, skip_wait: bool = True, *args, **kwargs) -> bytes:
     """async simple job."""
     logger.warning("Using the standard callable to process subscribe events.")
     data_response = json.loads(data)
