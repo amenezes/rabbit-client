@@ -34,10 +34,16 @@ class Consumer:
         self.queue_name = queue_name
         self.concurrent = concurrent
 
+    def run(self, chaos_mode: bool = False, verbose: bool = True):
+        task = async_echo_job
+        if chaos_mode:
+            task = async_chaos_job
+        self.loop.run_until_complete(self.init(task, verbose))
+        self.loop.run_forever()
+
     async def init(self, task, verbose: bool = False):
         logger.info(f"Using {task.__doc__}")
         subscribe = Subscribe(
-            client=self.subscribe_client,
             task=task,
             exchange=Exchange(
                 self.exchange_name, self.exchange_type, self.exchange_topic
@@ -45,17 +51,8 @@ class Consumer:
             queue=Queue(name=self.queue_name),
             concurrent=self.concurrent,
         )
-        await subscribe.configure()
+        await self.subscribe_client.register(subscribe)
         if verbose:
             while True:
                 await asyncio.sleep(10)
                 logger.debug(repr(self.subscribe_client))
-                for ch in self.subscribe_client.protocol.channels.values():
-                    logger.debug(f"Channel is open: {ch.is_open}")
-
-    def run(self, chaos_mode: bool = False, verbose: bool = True):
-        task = async_echo_job
-        if chaos_mode:
-            task = async_chaos_job
-        self.loop.run_until_complete(self.init(task, verbose))
-        self.loop.run_forever()

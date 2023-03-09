@@ -4,6 +4,7 @@ import pytest
 from aioamqp.envelope import Envelope
 from aioamqp.properties import Properties
 
+from rabbit.background_tasks import BackgroundTasks
 from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
 from rabbit.exchange import Exchange
@@ -11,7 +12,6 @@ from rabbit.job import async_echo_job
 from rabbit.publish import Publish
 from rabbit.queue import Queue
 from rabbit.subscribe import Subscribe
-from rabbit.background_tasks import BackgroundTasks
 
 
 class AioRabbitClientMock(AioRabbitClient):
@@ -21,6 +21,7 @@ class AioRabbitClientMock(AioRabbitClient):
         self._app = kwargs.get("app")
         self._background_tasks = BackgroundTasks()
         self._event = asyncio.Event()
+        self._items = list()
 
     @property
     def protocol(self):
@@ -134,38 +135,37 @@ class EnvelopeMock(Envelope):
 async def client():
     return AioRabbitClient()
 
+
 @pytest.fixture
 async def client_mock():
-    mock_client = AioRabbitClientMock()
-    yield mock_client
-    # for task in asyncio.all_tasks():
-    #     task.cancel()
+    return AioRabbitClientMock()
 
 
 @pytest.fixture
-async def subscribe(client):
-    return Subscribe(client=client)
-
-
-@pytest.fixture(scope="session")
-def queue():
-    return Queue(name="queue")
+async def subscribe():
+    return Subscribe(task=async_echo_job)
 
 
 @pytest.fixture
-async def publish(client):
-    return Publish(client=client)
+async def subscribe_mock(subscribe, client_mock):
+    await client_mock.register(subscribe)
+    return subscribe
 
 
 @pytest.fixture
-def exchange():
-    return Exchange(name="exchange", exchange_type="topic", topic="#")
+async def publish():
+    return Publish()
 
 
 @pytest.fixture
-async def dlx(client):
+async def publish_mock(publish, client_mock):
+    await client_mock.register(publish)
+    return publish
+
+
+@pytest.fixture
+async def dlx():
     return DLX(
-        client,
         Exchange(name="dlx", exchange_type="direct"),
         Exchange(name="dlq_rerouter", exchange_type="topic", topic="queue"),
         Queue(
@@ -181,7 +181,6 @@ async def dlx(client):
 @pytest.fixture
 async def dlx_mock():
     return DLX(
-        AioRabbitClientMock(),
         Exchange(name="dlx", exchange_type="direct"),
         Exchange(name="dlq_rerouter", exchange_type="topic", topic="queue"),
         Queue(
@@ -194,24 +193,11 @@ async def dlx_mock():
     )
 
 
-@pytest.fixture
-@pytest.mark.asyncio
-async def publish_mock():
-    return Publish(AioRabbitClientMock())
+@pytest.fixture(scope="session")
+def queue():
+    return Queue(name="queue")
 
 
 @pytest.fixture
-@pytest.mark.asyncio
-async def subscribe_mock(client_mock):
-    return Subscribe(client=client_mock, task=async_echo_job)
-
-
-@pytest.fixture
-@pytest.mark.asyncio
-async def subscribe_dlx(dlx, client_mock):
-    return Subscribe(client=client_mock, task=async_echo_job)
-
-
-@pytest.fixture
-async def subscribe_all(dlx, publish_mock, client_mock):
-    return Subscribe(client=client_mock, task=async_echo_job)
+def exchange():
+    return Exchange(name="exchange", exchange_type="topic", topic="#")

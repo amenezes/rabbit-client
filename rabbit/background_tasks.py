@@ -1,7 +1,10 @@
 import asyncio
+from contextlib import suppress
 from typing import Dict, Generator, List
 
 from attrs import field, mutable, validators
+
+from rabbit.logger import logger
 
 
 @mutable
@@ -17,15 +20,19 @@ class BackgroundTasks:
         ],
     )
 
-    def add(self, name: str, task: asyncio.Task) -> None:
-        if name not in self._tasks.keys():
-            self._tasks.update({name: task})
+    def add(self, name: str, awt, *args, **kwargs) -> None:
+        loop = asyncio.get_running_loop()
+        logger.debug(f"Trying registering task: '{name}'")
+
+        if name not in self.tasks_by_name():
+            logger.debug(f"Registering task: '{name}'")
+            task_runner = loop.create_task(awt(*args, **kwargs))
+            task_runner.add_done_callback(self.discard)
+            self._tasks.update({name: task_runner})
 
     def discard(self, task: asyncio.Task) -> None:
-        try:
+        with suppress(KeyError):
             del self._tasks[task.get_name()]
-        except KeyError:
-            pass
 
     def tasks_by_name(self) -> List[str]:
         return [task_name for task_name in self._tasks.keys()]
@@ -38,4 +45,6 @@ class BackgroundTasks:
         return len(self._tasks)
 
     def __repr__(self) -> str:
-        return f"BackgroundTasks(tasks={len(self)})"
+        return (
+            f"BackgroundTasks(tasks={len(self)}, tasks_by_name={self.tasks_by_name()})"
+        )

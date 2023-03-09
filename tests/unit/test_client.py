@@ -25,16 +25,16 @@ async def test_channel_not_initialized(client):
         await client.get_channel()
 
 
-async def test_watch(client):
+async def test_watch_connection_state(client, subscribe):
     loop = asyncio.get_running_loop()
-    loop.create_task(client.watch(client))
+    loop.create_task(client.watch_connection_state(subscribe))
     client.protocol = "xxx"
 
 
 def test_client_repr(client):
     assert (
         repr(client)
-        == "AioRabbitClient(connected=False, channels=0, max_channels=0, background_tasks=[])"
+        == "AioRabbitClient(connected=False, channels=0, max_channels=0, background_tasks=BackgroundTasks(tasks=0, tasks_by_name=[]))"
     )
 
 

@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, Optional
+from typing import Callable
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
@@ -7,7 +7,6 @@ from aioamqp.properties import Properties
 from attrs import field, mutable, validators
 
 from ._wait import constant
-from .client import AioRabbitClient
 from .exceptions import AttributeNotInitialized, OperationError
 from .exchange import Exchange
 from .logger import logger
@@ -16,10 +15,6 @@ from .queue import Queue
 
 @mutable
 class DLX:
-    _client: AioRabbitClient = field(
-        validator=validators.instance_of(AioRabbitClient),
-        repr=False,
-    )
     exchange: Exchange = field(
         validator=validators.instance_of(Exchange),
     )
@@ -37,13 +32,16 @@ class DLX:
     def __repr__(self) -> str:
         return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
 
-    async def configure(self, channel: Optional[Channel] = None) -> None:
-        """Configure DLX channel, queues and exchange."""
-        if channel is None:
-            self._channel = await self._client.get_channel()
-        else:
-            self._channel = channel
+    @property
+    def channel(self) -> Channel:
+        return self._channel
 
+    @channel.setter
+    def channel(self, channel: Channel):
+        self._channel = channel
+
+    async def configure(self) -> None:
+        """Configure DLX channel, queues and exchange."""
         try:
             await self._configure_queue()
             await self._configure_exchange()

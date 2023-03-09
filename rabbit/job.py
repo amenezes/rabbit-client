@@ -12,6 +12,7 @@ async def async_echo_job(
     logger.warning("Using the standard callable to process subscribe events.")
     data_response = json.loads(data)
     if not skip_wait:
+        logger.info("Waiting 30 seconds...")
         await asyncio.sleep(30)
     logger.info(f"ECHO: {data_response}")
     return bytes(json.dumps(data_response), "utf-8")

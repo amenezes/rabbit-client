@@ -1,24 +1,19 @@
 import pytest
 
-from rabbit.exceptions import AttributeNotInitialized
-
-
-async def test_configure(publish_mock):
-    await publish_mock.configure()
-
-
-async def test_configure_with_client_not_initialized(publish):
-    with pytest.raises(AttributeNotInitialized):
-        await publish.configure()
+from rabbit.exceptions import ClientNotConnectedError
 
 
 async def test_send_event(publish_mock):
-    await publish_mock.configure()
     await publish_mock.send_event(123)
 
 
-def test_publish_repr(publish):
-    assert repr(publish) == "Publish(channel_id=0, publisher_confirms=False)"
+async def test_register_publish_without_client_connected(publish):
+    with pytest.raises(ClientNotConnectedError):
+        await publish.configure(True)
+
+
+def test_publish_repr(publish_mock):
+    assert repr(publish_mock) == "Publish(channel_id=0, publisher_confirms=False)"
 
 
 async def test_enable_publish_confirms(publish_mock):

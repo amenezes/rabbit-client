@@ -10,19 +10,14 @@ from aioamqp.properties import Properties
 from attrs import field, mutable, validators
 
 from ._wait import constant
-from .client import AioRabbitClient
 from .dlx import DLX
-from .exceptions import AttributeNotInitialized
+from .exceptions import ClientNotConnectedError
 from .exchange import Exchange
-from .logger import logger
 from .queue import Queue
 
 
 @mutable(repr=False)
 class Subscribe:
-    _client: AioRabbitClient = field(
-        validator=validators.instance_of(AioRabbitClient),
-    )
     task: Callable = field(validator=validators.is_callable())
     exchange: Exchange = field(
         default=Exchange(
@@ -52,7 +47,6 @@ class Subscribe:
 
     def __attrs_post_init__(self) -> None:
         self._dlx = DLX(
-            client=self._client,
             exchange=Exchange(
                 name=os.getenv("DLX_EXCHANGE_NAME", "DLX"),
                 exchange_type=os.getenv("DLX_TYPE", "direct"),
@@ -77,36 +71,29 @@ class Subscribe:
         self._loop = asyncio.get_running_loop()
 
     @property
+    def name(self) -> str:
+        return "Subscribe"
+
+    @property
     def channel(self) -> Channel:
-        return self._channel
+        try:
+            return self._channel
+        except AttributeError:
+            raise ClientNotConnectedError
 
     @channel.setter
     def channel(self, channel: Channel) -> None:
+        self._dlx.channel = channel
         self._channel = channel
 
     async def configure(self, channel: Optional[Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
-        await asyncio.sleep(2)
-        if channel is None:
-            self.channel = await self._client.get_channel()
-            await self._client.register_watch(
-                "subscribe-watcher", self._client.watch, self
-            )
-            await self._client.register_watch(
-                "subscribe-channel-watcher", self._client._watch_channel_state, self
-            )
-        else:
-            self.channel = channel
-
         await self.qos(prefetch_count=self.concurrent)
         with suppress(SynchronizationError):
-            try:
-                await self._configure_queue()
-                await self._dlx.configure(channel)
-                await self._configure_exchange()
-                await self._configure_queue_bind()
-            except AttributeNotInitialized:
-                logger.debug("Waiting client initialization...SUBSCRIBE")
+            await self._configure_queue()
+            await self._dlx.configure()
+            await self._configure_exchange()
+            await self._configure_queue_bind()
 
     async def _configure_exchange(self) -> None:
         await self.channel.exchange_declare(
