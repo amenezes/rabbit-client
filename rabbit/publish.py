@@ -3,7 +3,7 @@ from typing import Optional
 
 from aioamqp.channel import Channel
 from aioamqp.exceptions import ChannelClosed
-from attrs import field, mutable
+from attrs import field, mutable, validators
 
 from rabbit.exceptions import ClientNotConnectedError
 
@@ -12,22 +12,17 @@ from .exceptions import ExchangeNotFound
 
 @mutable(repr=False)
 class Publish:
+    publish_confirms: bool = field(
+        default=False, validator=validators.instance_of(bool)
+    )
     _channel: Channel = field(init=False)
 
     def __repr__(self) -> str:
-        return f"Publish(channel_id={self.channel_id}, publisher_confirms={self.publisher_confirms})"
+        return f"Publish(channel_id={self.channel_id}, publisher_confirms={self.publish_confirms})"
 
     @property
     def name(self) -> str:
         return "Publish"
-
-    @property
-    def publisher_confirms(self) -> bool:
-        """Check if publisher_confirms was enable on the channel."""
-        try:
-            return self.channel.publisher_confirms  # type: ignore
-        except AttributeError:
-            return False
 
     @property
     def channel_id(self) -> int:
@@ -48,9 +43,9 @@ class Publish:
     def channel(self, channel: Channel) -> None:
         self._channel = channel
 
-    async def configure(self, enable_publish_confirms: bool = False) -> None:
+    async def configure(self) -> None:
         """Configure publisher channel."""
-        if enable_publish_confirms:
+        if self.publish_confirms:
             await self.enable_publish_confirms()
 
     async def enable_publish_confirms(self) -> None:
@@ -79,6 +74,6 @@ class Publish:
                 **kwargs,
             )
         except ChannelClosed as err:
-            await self.configure(enable_publish_confirms=self.publisher_confirms)
+            await self.configure()
             if err.message.find("no exchange") > 0:
-                raise ExchangeNotFound(f"Exchange '{exchange_name}' not found")
+                raise ExchangeNotFound(exchange_name)  # type: ignore

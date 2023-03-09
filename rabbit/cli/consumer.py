@@ -21,13 +21,16 @@ class Consumer:
         queue_name: str,
         concurrent: int,
     ):
-        self.loop = asyncio.get_event_loop()
         self.subscribe_client = AioRabbitClient()
-        self.loop.create_task(
+
+        self._loop = asyncio.get_event_loop()
+        self._loop.create_task(
             self.subscribe_client.persistent_connect(
                 host=host, port=port, login=login, password=password
-            )
+            ),
+            name="rabbit-client-cli-connection",
         )
+
         self.exchange_type = exchange_type
         self.exchange_topic = exchange_topic
         self.exchange_name = exchange_name
@@ -38,11 +41,12 @@ class Consumer:
         task = async_echo_job
         if chaos_mode:
             task = async_chaos_job
-        self.loop.run_until_complete(self.init(task, verbose))
-        self.loop.run_forever()
+
+        self._loop.run_until_complete(self.init(task, verbose))
+        self._loop.run_forever()
 
     async def init(self, task, verbose: bool = False):
-        logger.info(f"Using {task.__doc__}")
+        logger.info(f"Using '{task.__doc__}'")
         subscribe = Subscribe(
             task=task,
             exchange=Exchange(

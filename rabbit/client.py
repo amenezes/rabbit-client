@@ -1,4 +1,5 @@
 import asyncio
+import random
 from typing import List, Optional
 from uuid import uuid4
 
@@ -106,6 +107,7 @@ class AioRabbitClient:
                     pass
 
     async def register(self, item) -> None:
+        await asyncio.sleep(random.uniform(1.0, 1.5))
         self._items.append(item)
         task_id = uuid4().hex
         item.channel = await self.get_channel()

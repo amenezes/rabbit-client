@@ -7,7 +7,10 @@ class OperationError(Exception):
 
 
 class ExchangeNotFound(Exception):
-    pass
+    def __init__(
+        self, exchange_name: str, message: str = "Exchange '{name}' not found"
+    ):
+        super().__init__(message.format(name=exchange_name))
 
 
 class ClientNotConnectedError(Exception):

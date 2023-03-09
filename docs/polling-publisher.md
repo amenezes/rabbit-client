@@ -26,8 +26,9 @@ logging.getLogger().setLevel(logging.DEBUG)
 client = AioRabbitClient()
 asyncio.create_task(client.persistent_connect())
 
-publish = Publish(client=client)
-loop.create_task(publish.configure())
+publish = Publish()
+await client.register(publish)
+
 
 class MyRepo:
     def __init__(self, publish, db):

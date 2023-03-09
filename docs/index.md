@@ -1,5 +1,4 @@
 [![ci](https://github.com/amenezes/rabbit-client/workflows/ci/badge.svg)](https://github.com/amenezes/rabbit-client/actions)
-[![Maintainability](https://api.codeclimate.com/v1/badges/f24caeb9d85f17de93e2/maintainability)](https://codeclimate.com/github/amenezes/rabbit-client/maintainability)
 [![codecov](https://codecov.io/gh/amenezes/rabbit-client/branch/master/graph/badge.svg)](https://codecov.io/gh/amenezes/rabbit-client)
 [![PyPI version](https://badge.fury.io/py/rabbit-client.svg)](https://badge.fury.io/py/rabbit-client)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/rabbit-client)
