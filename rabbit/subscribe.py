@@ -1,7 +1,7 @@
 import asyncio
 import os
 from contextlib import suppress
-from typing import Callable
+from typing import Callable, Optional
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
@@ -10,19 +10,14 @@ from aioamqp.properties import Properties
 from attrs import field, mutable, validators
 
 from ._wait import constant
-from .client import AioRabbitClient
 from .dlx import DLX
-from .exceptions import AttributeNotInitialized
+from .exceptions import ClientNotConnectedError
 from .exchange import Exchange
-from .logger import logger
 from .queue import Queue
 
 
 @mutable(repr=False)
 class Subscribe:
-    _client: AioRabbitClient = field(
-        validator=validators.instance_of(AioRabbitClient),
-    )
     task: Callable = field(validator=validators.is_callable())
     exchange: Exchange = field(
         default=Exchange(
@@ -45,14 +40,13 @@ class Subscribe:
     _dlx: DLX = field(validator=validators.instance_of(DLX), init=False)
     _job_queue = field(init=False)
     _loop = field(init=False)
-    _channel = field(init=False)
+    _channel: Channel = field(init=False)
 
     def __repr__(self) -> str:
         return f"Subscribe(task={self.task.__name__}, exchange={self.exchange}, queue={self.queue}, concurrent={self.concurrent}, dlx={self._dlx})"
 
     def __attrs_post_init__(self) -> None:
         self._dlx = DLX(
-            client=self._client,
             exchange=Exchange(
                 name=os.getenv("DLX_EXCHANGE_NAME", "DLX"),
                 exchange_type=os.getenv("DLX_TYPE", "direct"),
@@ -76,23 +70,33 @@ class Subscribe:
         self._job_queue = asyncio.Queue(maxsize=self.concurrent)
         self._loop = asyncio.get_running_loop()
 
-    async def configure(self) -> None:
+    @property
+    def name(self) -> str:
+        return "Subscribe"
+
+    @property
+    def channel(self) -> Channel:
+        try:
+            return self._channel
+        except AttributeError:
+            raise ClientNotConnectedError
+
+    @channel.setter
+    def channel(self, channel: Channel) -> None:
+        self._dlx.channel = channel
+        self._channel = channel
+
+    async def configure(self, channel: Optional[Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
-        await asyncio.sleep(2)
-        self._channel = await self._client.get_channel()
         await self.qos(prefetch_count=self.concurrent)
-        self._loop.create_task(self._client.watch(self), name="subscribe_watcher")
         with suppress(SynchronizationError):
-            try:
-                await self._configure_queue()
-                await self._dlx.configure()
-                await self._configure_exchange()
-                await self._configure_queue_bind()
-            except AttributeNotInitialized:
-                logger.debug("Waiting client initialization...SUBSCRIBE")
+            await self._configure_queue()
+            await self._dlx.configure()
+            await self._configure_exchange()
+            await self._configure_queue_bind()
 
     async def _configure_exchange(self) -> None:
-        await self._channel.exchange_declare(
+        await self.channel.exchange_declare(
             exchange_name=self.exchange.name,
             type_name=self.exchange.exchange_type,
             durable=self.exchange.durable,
@@ -100,17 +104,17 @@ class Subscribe:
         await asyncio.sleep(1.5)
 
     async def _configure_queue(self) -> None:
-        await self._channel.queue_declare(
+        await self.channel.queue_declare(
             queue_name=self.queue.name, durable=self.queue.durable
         )
 
     async def _configure_queue_bind(self) -> None:
-        await self._channel.queue_bind(
+        await self.channel.queue_bind(
             exchange_name=self.exchange.name,
             queue_name=self.queue.name,
             routing_key=self.exchange.topic,
         )
-        await self._channel.basic_consume(
+        await self.channel.basic_consume(
             callback=self.callback, queue_name=self.queue.name
         )
 
@@ -119,7 +123,7 @@ class Subscribe:
     ) -> None:
         if not self._job_queue.full():
             self._job_queue.put_nowait((body, envelope, properties))
-            self._loop.create_task(self._run(), name="subscribe_task")
+            self._loop.create_task(self._run(), name="subscribe-task")
         else:
             await self.nack_event(envelope, requeue=True)
             await self._job_queue.join()
@@ -139,22 +143,22 @@ class Subscribe:
             )
 
     async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
-        """Sends ack message to broker ."""
-        await self._channel.basic_client_ack(
+        """Sends ack message to broker."""
+        await self.channel.basic_client_ack(
             delivery_tag=envelope.delivery_tag, multiple=multiple
         )
 
     async def nack_event(
         self, envelope: Envelope, multiple: bool = False, requeue: bool = True
     ) -> None:
-        """Sends nack message to broker ."""
-        await self._channel.basic_client_nack(
+        """Sends nack message to broker."""
+        await self.channel.basic_client_nack(
             delivery_tag=envelope.delivery_tag, multiple=multiple, requeue=requeue
         )
 
     async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
         """Informs for the message broker that event message was rejected."""
-        await self._channel.basic_reject(
+        await self.channel.basic_reject(
             delivery_tag=envelope.delivery_tag, requeue=requeue
         )
 
@@ -165,7 +169,7 @@ class Subscribe:
         connection_global: bool = False,
     ):
         """Configure qos feature in the subscriber channel."""
-        await self._channel.basic_qos(
+        await self.channel.basic_qos(
             prefetch_size=prefetch_size,
             prefetch_count=prefetch_count,
             connection_global=connection_global,

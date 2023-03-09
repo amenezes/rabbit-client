@@ -1,40 +1,22 @@
 import pytest
 
-from rabbit.client import AioRabbitClient
-from rabbit.exceptions import AttributeNotInitialized
-from rabbit.job import async_echo_job
-from rabbit.subscribe import Subscribe
+from rabbit.exceptions import ClientNotConnectedError
 from tests.conftest import EnvelopeMock
 
 PAYLOAD = b'{"a": 1}'
 
 
-async def test_configure(subscribe_mock):
-    await subscribe_mock.configure()
-
-
-async def test_configure_with_client_not_initialized():
-    subscribe = Subscribe(AioRabbitClient(), async_echo_job)
-    with pytest.raises(AttributeNotInitialized):
+async def test_register_subscribe_without_client_connected(subscribe):
+    with pytest.raises(ClientNotConnectedError):
         await subscribe.configure()
 
 
-async def test_configure_with_dlx(subscribe_dlx):
-    await subscribe_dlx.configure()
-
-
 async def test_reject_event(subscribe_mock):
-    await subscribe_mock.configure()
     await subscribe_mock.reject_event(EnvelopeMock())
 
 
 async def test_ack_event(subscribe_mock):
-    await subscribe_mock.configure()
     await subscribe_mock.ack_event(EnvelopeMock())
-
-
-def test_subscribe_with_dlx(dlx, subscribe_dlx):
-    assert subscribe_dlx._dlx is not None
 
 
 def test_subscribe_repr(subscribe_mock):
@@ -42,5 +24,4 @@ def test_subscribe_repr(subscribe_mock):
 
 
 async def test_nack_event(subscribe_mock):
-    await subscribe_mock.configure()
     await subscribe_mock.nack_event(EnvelopeMock())
