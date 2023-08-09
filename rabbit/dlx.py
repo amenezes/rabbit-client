@@ -97,7 +97,7 @@ class DLX:
     ) -> None:
         """Sent event message to DLX/DLQ."""
         timeout = self.delay_strategy(properties.headers)
-        properties = await self._get_properties(timeout, cause, envelope)
+        properties = await self._get_properties(timeout, cause, envelope, properties)
 
         logger.debug(
             f"Send event to dlq: [exchange: {self.exchange.name}"
@@ -111,9 +111,13 @@ class DLX:
             raise OperationError("Ensure that instance was connected ")
 
     async def _get_properties(
-        self, timeout: int, exception_message: Exception, envelope: Envelope
+        self,
+        timeout: int,
+        exception_message: Exception,
+        envelope: Envelope,
+        properties: Properties,
     ) -> dict:
-        return {
+        custom_properties: dict = {
             "expiration": f"{timeout}",
             "headers": {
                 "x-delay": f"{timeout}",
@@ -122,3 +126,6 @@ class DLX:
                 "x-original-routingKey": f"{envelope.routing_key}",
             },
         }
+        if properties.headers is not None:
+            custom_properties["headers"].update(properties.headers)
+        return custom_properties
