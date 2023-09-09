@@ -7,6 +7,7 @@ from rich.live import Live
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.table import Table
+from trogon import tui
 
 from rabbit import __version__
 from rabbit.cli.consumer import Consumer
@@ -18,6 +19,7 @@ CONTEXT_SETTINGS = dict(
 console = Console()
 
 
+@tui(command="terminal-ui", help="Open terminal UI")
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.version_option(version=__version__)
 def cli():
