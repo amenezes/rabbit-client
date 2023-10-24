@@ -1,6 +1,6 @@
 ## Delay strategies
 
-- [scheduling messages](https://blog.rabbitmq.com/posts/2015/04/scheduling-messages-with-rabbitmq)
+- [Scheduling Messages with RabbitMQ](https://blog.rabbitmq.com/posts/2015/04/scheduling-messages-with-rabbitmq)
 
 ### expo
 
@@ -8,15 +8,15 @@ Exponential backoff time, inspired in the great library [backoff](https://github
 
 By default a cycle with 3 iteractions will produces:
 
-```txt
-1. 600000 # 10 minutes
-2. 1200000 # 20 minutes
-3. 2400000 # 40 minutes
+```txt linenums="1"
+600000 # 10 minutes
+1200000 # 20 minutes
+2400000 # 40 minutes
 ```
 
 #### configuration
 
-```ini
+```ini linenums="1"
 # delay
 EXPO_DELAY=300000
 
@@ -36,7 +36,7 @@ Incremental delay by minute.
 
 By default a cycle with 3 iteractions will produces:
 
-```txt
+```txt linenums="1"
 1. 360000 # 6 minutes
 2. 420000 # 7 minutes
 3. 480000 # 8 minutes
@@ -58,10 +58,10 @@ Constant time.
 
 By default a cycle with 3 iteractions will produces:
 
-```txt
-1. 300000 # 5 minutes 
-2. 300000 # 5 minutes
-3. 300000 # 5 minutes
+```txt linenums="1"
+300000 # 5 minutes 
+300000 # 5 minutes
+300000 # 5 minutes
 ```
 
 > **constant** strategy it's the default option for Subscribe.
@@ -74,7 +74,7 @@ CONSTANT_DELAY=300000
 
 ## Usage
 
-```python
+```py linenums="1" title="error-strategy-example.py"
 import asyncio
 from rabbit import AioRabbitClient, Subscribe, fibo
 from rabbit.job import async_echo_job

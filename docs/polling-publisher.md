@@ -1,6 +1,7 @@
 # Polling Publisher
 
-> From the version 1.x this feature is supported out-of-box.
+!!! info ""
+    From the version 1.x this feature is supported out-of-box.
 
 ![rabbit-client-workflow-polling](./rabbit-client-workflow-polling.png)
 
@@ -8,11 +9,9 @@
 
 > [https://microservices.io/patterns/data/polling-publisher.html](https://microservices.io/patterns/data/polling-publisher.html)
 
-## Usage Example
+## Usage example
 
-### Subscribe & Polling Publisher
-
-```python
+``` py linenums="1" title="subscribe-polling-publisher.py"
 import asyncio
 import logging
 

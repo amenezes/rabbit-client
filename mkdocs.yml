@@ -6,16 +6,17 @@ theme:
   logo: bunny.png
   favicon: bunny.png
   features:
+    - toc.integrate
+    - toc.follow
     - navigation.instant
     - navigation.top
     - navigation.prune
-    - toc.integrate 
     - search.highlight
     - search.suggest
     - search.share
     - content.code.annotate
     - content.tooltips
-    - toc.follow
+    - content.code.copy
   palette:
     - scheme: default
       primary: deep orange
@@ -39,6 +40,20 @@ extra:
       link: https://github.com/amenezes/rabbit-client/issues
     - icon: fontawesome/solid/envelope
       link: mailto:alexandre.fmenezes@gmail.com
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - tables
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 nav:
 - Overview: overview.md
 - Publish Subscribe: publish-subscribe.md

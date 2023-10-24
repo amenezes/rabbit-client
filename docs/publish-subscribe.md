@@ -6,11 +6,13 @@
 
 ## Usage Example
 
-All code examples can be used in the python asyncio REPL: `python -m asyncio` available on python >= 3.8.
+!!! info ""
+
+    All code examples can be used in the python asyncio REPL, for this use: `python -m asyncio` available on python >= 3.8.
 
 #### Consumer
 
-```python
+```py linenums="1" title="consumer-example.py"
 import logging
 
 from rabbit import AioRabbitClient, Subscribe
@@ -29,15 +31,15 @@ await client.register(subscribe)
 
 ### Publisher
 
-#### CLI example
+#### CLI
 
 ```bash
 python -m rabbit send-event data.json
 ```
 
-#### Code example
+#### Code
 
-```python
+``` py linenums="1" title="publisher-example.py"
 import logging
 
 from rabbit import AioRabbitClient, Publish

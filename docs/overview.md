@@ -16,7 +16,7 @@ The main values expected to configure `rabbit-client` can be set via environment
 
 ### Default values
 
-```.env
+```.env title="Default values for environment variables"
 # publisher - send_event method
 PUBLISH_EXCHANGE_NAME=default.in.exchange
 PUBLISH_ROUTING_KEY=#

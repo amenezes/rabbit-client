@@ -10,7 +10,7 @@ The `Subscribe` class use a `task` that's nothing more that an awaitable. This w
 
 A DLQ will assist you to dosen't lost an event that fail for some reason. So if somehow the task fails, raising any kind of exception, the event will be sent to DLQ and after some delay defined by `rabbit-client` strategy it will be back in the main queue so that the application can try to process it again.
 
-- [when and how to use rabbitmq dlx](https://www.cloudamqp.com/blog/when-and-how-to-use-the-rabbitmq-dead-letter-exchange.html)
+- [When and how to use the RabbitMQ Dead Letter Exchange](https://www.cloudamqp.com/blog/when-and-how-to-use-the-rabbitmq-dead-letter-exchange.html)
 
 ## **How optimize concurrent jobs?**
 
@@ -18,7 +18,7 @@ Just increase the value of `concurrent` attribute in the Subscribe.
 
 However if the job consists in [CPU bound](https://en.wikipedia.org/wiki/CPU-bound) or long running tasks workloads it's a good choice decrease the value.
 
-- [prefetch count](https://www.cloudamqp.com/blog/how-to-optimize-the-rabbitmq-prefetch-count.html)
+- [How to Optimize the RabbitMQ Prefetch Count](https://www.cloudamqp.com/blog/how-to-optimize-the-rabbitmq-prefetch-count.html)
 
 
 ## **Why use publisher-confirms?**
