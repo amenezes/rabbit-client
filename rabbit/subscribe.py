@@ -72,6 +72,7 @@ class Subscribe:
 
     @property
     def name(self) -> str:
+        """Object name."""
         return "Subscribe"
 
     @property
@@ -167,7 +168,7 @@ class Subscribe:
         prefetch_size: int = 0,
         prefetch_count: int = 0,
         connection_global: bool = False,
-    ):
+    ) -> None:
         """Configure qos feature in the subscriber channel."""
         await self.channel.basic_qos(
             prefetch_size=prefetch_size,

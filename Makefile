@@ -4,9 +4,9 @@ VERSION := $(shell cat rabbit/__init__.py | grep '__version__ ' | cut -d'"' -f 2
 lint:
 ifeq ($(SKIP_STYLE), )
 	@echo "> running isort..."
-	isort --profile black rabbit
-	isort --profile black tests
-	isort --profile black setup.py
+	isort rabbit
+	isort tests
+	isort setup.py
 	@echo "> running black..."
 	black rabbit
 	black tests

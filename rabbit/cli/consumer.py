@@ -20,10 +20,10 @@ class Consumer:
         exchange_topic: str,
         queue_name: str,
         concurrent: int,
-    ):
+    ) -> None:
         self.subscribe_client = AioRabbitClient()
 
-        self._loop = asyncio.get_event_loop()
+        self._loop = self.event_loop()  # type: ignore
         self._loop.create_task(
             self.subscribe_client.persistent_connect(
                 host=host, port=port, login=login, password=password
@@ -37,7 +37,14 @@ class Consumer:
         self.queue_name = queue_name
         self.concurrent = concurrent
 
-    def run(self, chaos_mode: bool = False, verbose: bool = True):
+    def event_loop(self):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+        return loop
+
+    def run(self, chaos_mode: bool = False, verbose: bool = True) -> None:
         task = async_echo_job
         if chaos_mode:
             task = async_chaos_job
@@ -45,7 +52,7 @@ class Consumer:
         self._loop.run_until_complete(self.init(task, verbose))
         self._loop.run_forever()
 
-    async def init(self, task, verbose: bool = False):
+    async def init(self, task, verbose: bool = False) -> None:
         logger.info(f"Using '{task.__doc__}'")
         subscribe = Subscribe(
             task=task,

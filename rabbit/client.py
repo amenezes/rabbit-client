@@ -67,7 +67,7 @@ class AioRabbitClient:
         """Connect to message broker."""
         self.transport, self.protocol = await aioamqp.connect(**kwargs)
 
-    async def persistent_connect(self, **kwargs):
+    async def persistent_connect(self, **kwargs) -> None:
         """Connect to message broker ensuring reconnection in case of error."""
         while True:
             try:

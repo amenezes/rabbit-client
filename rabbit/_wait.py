@@ -1,15 +1,15 @@
 import os
-from typing import Optional
+from typing import Union
 
 from .logger import logger
 
 
 def expo(
-    headers,
-    delay: Optional[int] = None,
-    base: Optional[int] = None,
-    factor: Optional[int] = None,
-    max_delay: Optional[int] = None,
+    headers: Union[None, dict],
+    delay: Union[None, int] = None,
+    base: Union[None, int] = None,
+    factor: Union[None, int] = None,
+    max_delay: Union[None, int] = None,
 ) -> int:
     """Exponential delay strategy."""
     delay = delay or int(os.getenv("EXPO_DELAY", 300000))
@@ -30,9 +30,9 @@ def expo(
 
 
 def fibo(
-    headers,
-    delay: Optional[int] = None,
-    max_delay: Optional[int] = None,
+    headers: Union[None, dict],
+    delay: Union[None, int] = None,
+    max_delay: Union[None, int] = None,
 ) -> int:
     """Incremental delay strategy."""
     delay = delay or int(os.getenv("FIBO_DELAY", 300000))
@@ -47,14 +47,14 @@ def fibo(
     return int(max_delay)
 
 
-def constant(headers, delay: Optional[int] = None) -> int:
+def constant(headers: Union[None, dict], delay: Union[None, int] = None) -> int:
     """Constant delay strategy."""
     delay = delay or int(os.getenv("CONSTANT_DELAY", 300000))
     logger.debug(f"constant delay strategy: [delay={delay}]")
     return delay
 
 
-def _set_timeout(headers, delay: int) -> int:
+def _set_timeout(headers: Union[None, dict], delay: int) -> int:
     if (headers is not None) and ("x-delay" in headers):
         delay = headers["x-delay"]
     return int(delay)

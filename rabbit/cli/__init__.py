@@ -202,19 +202,19 @@ def consumer(
 @click.option("--channels", default=1, show_default=True, help="Channel max.")
 @click.option("-v", "--verbose", is_flag=True, help="Extend output info.")
 def send_event(
-    payload,
-    events,
-    exchange,
-    key,
-    host,
-    port,
-    login,
-    password,
-    ssl,
-    verify,
-    channels,
-    verbose,
-):
+    payload: Path,
+    events: int,
+    exchange: str,
+    key: str,
+    host: str,
+    port: int,
+    login: str,
+    password: str,
+    ssl: bool,
+    verify: bool,
+    channels: int,
+    verbose: bool,
+) -> None:
     """Send a sample message 📤 to Consumer or PollingPublisher"""
     if verbose:
         table = Table.grid(padding=(0, 1))
