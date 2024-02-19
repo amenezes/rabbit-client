@@ -1,7 +1,7 @@
 import asyncio
 import os
 from contextlib import suppress
-from typing import Callable, Optional
+from typing import Callable, Union
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
@@ -72,7 +72,6 @@ class Subscribe:
 
     @property
     def name(self) -> str:
-        """Object name."""
         return "Subscribe"
 
     @property
@@ -87,7 +86,7 @@ class Subscribe:
         self._dlx.channel = channel
         self._channel = channel
 
-    async def configure(self, channel: Optional[Channel] = None) -> None:
+    async def configure(self, channel: Union[None, Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
         await self.qos(prefetch_count=self.concurrent)
         with suppress(SynchronizationError):

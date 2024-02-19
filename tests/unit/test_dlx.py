@@ -1,5 +1,6 @@
 import pytest
 
+from rabbit.dlx import DLX
 from rabbit.exceptions import OperationError
 from tests.conftest import EnvelopeMock, PropertiesMock
 
@@ -20,3 +21,10 @@ async def test_send_event_error_without_client_connection(dlx):
 
 def test_dlx_repr(dlx):
     assert isinstance(repr(dlx), str)
+
+
+@pytest.mark.parametrize(
+    "attribute", ["exchange", "dlq_exchange", "queue", "delay_strategy", "channel"]
+)
+def test_dlx_attributes(attribute):
+    assert hasattr(DLX, attribute)

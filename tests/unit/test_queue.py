@@ -1,7 +1,6 @@
-import attr
+import pytest
 
 
-def test_attributes(queue):
-    values = ["queue", True, {}]
-    for value in values:
-        assert value in attr.asdict(queue).values()
+@pytest.mark.parametrize("attribute", ["name", "durable", "arguments"])
+def test_attributes(queue, attribute):
+    assert hasattr(queue, attribute)

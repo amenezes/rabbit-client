@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import List, Optional
+from typing import List, Union
 from uuid import uuid4
 
 import aioamqp
@@ -40,7 +40,7 @@ class AioRabbitClient:
         return f"AioRabbitClient(connected={connected}, channels={channels}, max_channels={max_channels}, background_tasks={self._background_tasks})"
 
     @property
-    def server_properties(self) -> Optional[dict]:
+    def server_properties(self) -> Union[None, dict]:
         """Get server properties from the current connection."""
         try:
             return self.protocol.server_properties  # type: ignore
