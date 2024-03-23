@@ -90,8 +90,7 @@ class Subscribe:
         """Configure subscriber channel, queues and exchange."""
         await self.qos(prefetch_count=self.concurrent)
         with suppress(SynchronizationError):
-            await self._configure_queue()
-            await self._dlx.configure()
+            await asyncio.gather(self._configure_queue(), self._dlx.configure())
             await self._configure_exchange()
             await self._configure_queue_bind()
 

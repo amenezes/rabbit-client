@@ -74,7 +74,7 @@ class AioRabbitClient:
                 self.transport, self.protocol = await aioamqp.connect(**kwargs)
                 await self.protocol.wait_closed()
                 self.transport.close()
-            except (OSError, aioamqp.exceptions.AmqpClosedConnection) as err:
+            except (OSError, AmqpClosedConnection) as err:
                 logger.error(
                     f"ConnectionError: [error='{err}', host='{kwargs.get('host')}', port={kwargs.get('port')}, login='{kwargs.get('login')}']"
                 )

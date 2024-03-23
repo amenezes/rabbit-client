@@ -43,8 +43,7 @@ class DLX:
     async def configure(self) -> None:
         """Configure DLX channel, queues and exchange."""
         try:
-            await self._configure_queue()
-            await self._configure_exchange()
+            await asyncio.gather(self._configure_queue(), self._configure_exchange())
             await self._configure_queue_bind()
         except AttributeNotInitialized:
             logger.debug("Waiting client initialization...DLX")
