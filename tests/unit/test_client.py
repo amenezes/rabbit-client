@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from rabbit.client import aioamqp
+from rabbit.client import AioRabbitClient, aioamqp
 from rabbit.exceptions import AttributeNotInitialized
 from tests.conftest import AioAmqpMock
 
@@ -44,3 +44,8 @@ def test_server_properties_with_client_not_connected(client):
 
 def test_server_properties(client_mock):
     assert isinstance(client_mock.server_properties, dict)
+
+
+@pytest.mark.parametrize("attribute", ["transport", "server_properties", "protocol"])
+def test_client_attributes(attribute):
+    assert hasattr(AioRabbitClient, attribute)

@@ -1,9 +1,8 @@
 import pytest
 
 from rabbit.exceptions import ClientNotConnectedError
+from rabbit.subscribe import Subscribe
 from tests.conftest import EnvelopeMock
-
-PAYLOAD = b'{"a": 1}'
 
 
 async def test_register_subscribe_without_client_connected(subscribe):
@@ -25,3 +24,10 @@ def test_subscribe_repr(subscribe_mock):
 
 async def test_nack_event(subscribe_mock):
     await subscribe_mock.nack_event(EnvelopeMock())
+
+
+@pytest.mark.parametrize(
+    "attribute", ["task", "exchange", "queue", "concurrent", "delay_strategy"]
+)
+def test_subscribe_attributes(attribute):
+    assert hasattr(Subscribe, attribute)

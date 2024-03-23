@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Union
 
 from aioamqp.channel import Channel
 from aioamqp.exceptions import ChannelClosed
@@ -57,8 +57,8 @@ class Publish:
     async def send_event(
         self,
         payload: bytes,
-        exchange_name: Optional[str] = None,
-        routing_key: Optional[str] = None,
+        exchange_name: Union[None, str] = None,
+        routing_key: Union[None, str] = None,
         **kwargs,
     ) -> None:
         """Sends event message to broker."""

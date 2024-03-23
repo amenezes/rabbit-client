@@ -24,7 +24,7 @@ class DLX:
     queue: Queue = field(
         validator=validators.instance_of(Queue),
     )
-    delay_strategy: Callable = field(
+    delay_strategy: Callable[..., int] = field(
         default=constant, validator=validators.is_callable()
     )
     _channel = field(init=False, repr=False)
@@ -37,14 +37,13 @@ class DLX:
         return self._channel
 
     @channel.setter
-    def channel(self, channel: Channel):
+    def channel(self, channel: Channel) -> None:
         self._channel = channel
 
     async def configure(self) -> None:
         """Configure DLX channel, queues and exchange."""
         try:
-            await self._configure_queue()
-            await self._configure_exchange()
+            await asyncio.gather(self._configure_queue(), self._configure_exchange())
             await self._configure_queue_bind()
         except AttributeNotInitialized:
             logger.debug("Waiting client initialization...DLX")

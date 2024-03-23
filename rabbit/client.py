@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import List, Optional
+from typing import List, Union
 from uuid import uuid4
 
 import aioamqp
@@ -40,7 +40,7 @@ class AioRabbitClient:
         return f"AioRabbitClient(connected={connected}, channels={channels}, max_channels={max_channels}, background_tasks={self._background_tasks})"
 
     @property
-    def server_properties(self) -> Optional[dict]:
+    def server_properties(self) -> Union[None, dict]:
         """Get server properties from the current connection."""
         try:
             return self.protocol.server_properties  # type: ignore
@@ -67,14 +67,14 @@ class AioRabbitClient:
         """Connect to message broker."""
         self.transport, self.protocol = await aioamqp.connect(**kwargs)
 
-    async def persistent_connect(self, **kwargs):
+    async def persistent_connect(self, **kwargs) -> None:
         """Connect to message broker ensuring reconnection in case of error."""
         while True:
             try:
                 self.transport, self.protocol = await aioamqp.connect(**kwargs)
                 await self.protocol.wait_closed()
                 self.transport.close()
-            except (OSError, aioamqp.exceptions.AmqpClosedConnection) as err:
+            except (OSError, AmqpClosedConnection) as err:
                 logger.error(
                     f"ConnectionError: [error='{err}', host='{kwargs.get('host')}', port={kwargs.get('port')}, login='{kwargs.get('login')}']"
                 )

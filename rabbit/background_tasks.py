@@ -37,6 +37,9 @@ class BackgroundTasks:
     def tasks_by_name(self) -> List[str]:
         return [task_name for task_name in self._tasks.keys()]
 
+    def __getitem__(self, name: str) -> asyncio.Task:
+        return self._tasks[name]
+
     def __iter__(self) -> Generator[asyncio.Task, None, None]:
         for _, task in self._tasks.items():
             yield task

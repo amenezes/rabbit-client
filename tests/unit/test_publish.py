@@ -24,3 +24,10 @@ async def test_publish_confirms_disabled(publish):
 async def test_publish_confirms_enabled():
     publish = Publish(True)
     assert publish.publish_confirms is True
+
+
+@pytest.mark.parametrize(
+    "attribute", ["publish_confirms", "name", "channel_id", "channel"]
+)
+def test_publish_attributes(attribute):
+    assert hasattr(Publish, attribute)
