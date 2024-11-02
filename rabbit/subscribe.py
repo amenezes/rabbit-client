@@ -56,7 +56,7 @@ class Subscribe:
                     "DLQ_EXCHANGE_NAME", f"dlqReRouter.{self.exchange.name}"
                 ),
                 exchange_type=os.getenv("DLQ_EXCHANGE_TYPE", "topic"),
-                topic=os.getenv("SUBSCRIBE_QUEUE", self.queue.name),
+                topic=self.queue.name,
             ),
             queue=Queue(
                 name=self.queue.name,

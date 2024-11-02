@@ -21,10 +21,10 @@ rabbit-client provides a simple and automatic configuration to work with:
 
 ## Installing
 
-Install and update using pip:
+Install and update using uv:
 
 ```bash
-pip install -U rabbit-client
+uv pip install -U rabbit-client
 ```
 
 ## Links

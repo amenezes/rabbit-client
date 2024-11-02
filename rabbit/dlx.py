@@ -107,7 +107,7 @@ class DLX:
                 body, self.exchange.name, self.queue.name, properties
             )
         except AttributeError:
-            raise OperationError("Ensure that instance was connected ")
+            raise OperationError
 
     async def _get_properties(
         self,

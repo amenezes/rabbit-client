@@ -1,11 +1,11 @@
 class AttributeNotInitialized(Exception):
-    def __init__(self, message: str = "Attribute not initialized") -> None:
-        super().__init__(message)
+    def __init__(self) -> None:
+        super().__init__("Attribute not initialized")
 
 
 class OperationError(Exception):
-    def __init__(self, message: str = "OperationError") -> None:
-        super().__init__(message)
+    def __init__(self) -> None:
+        super().__init__("OperationError")
 
 
 class ExchangeNotFound(Exception):
@@ -14,7 +14,5 @@ class ExchangeNotFound(Exception):
 
 
 class ClientNotConnectedError(Exception):
-    def __init__(
-        self, message: str = "AioRabbitClient was not connected with RabbitMQ"
-    ) -> None:
-        super().__init__(message)
+    def __init__(self) -> None:
+        super().__init__("AioRabbitClient was not connected with RabbitMQ")

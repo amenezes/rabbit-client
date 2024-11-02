@@ -1,7 +1,7 @@
 import asyncio
 import random
+from hashlib import sha512
 from typing import List, Union
-from uuid import uuid4
 
 import aioamqp
 from aioamqp.channel import Channel
@@ -59,7 +59,7 @@ class AioRabbitClient:
     async def get_channel(self) -> Channel:
         """Get a new channel from current connection."""
         if not self.protocol:
-            raise AttributeNotInitialized("Connection not initialized.")
+            raise AttributeNotInitialized
         channel = await self.protocol.channel()
         return channel
 
@@ -109,16 +109,18 @@ class AioRabbitClient:
     async def register(self, item) -> None:
         await asyncio.sleep(random.uniform(1.0, 1.5))
         self._items.append(item)
-        task_id = uuid4().hex
+        task_id = sha512(item.name.encode("utf-8")).hexdigest()
         item.channel = await self.get_channel()
         await item.configure()
-        await self.register_watch(
-            f"{item.name}-watch-connection-state-{task_id}",
-            self.watch_connection_state,
-            item,
-        )
-        await self.register_watch(
-            f"{item.name}-watch-channel-state-{task_id}",
-            self.watch_channel_state,
-            item,
+        await asyncio.gather(
+            self.register_watch(
+                f"{item.name}-watch-connection-state-{task_id}",
+                self.watch_connection_state,
+                item,
+            ),
+            self.register_watch(
+                f"{item.name}-watch-channel-state-{task_id}",
+                self.watch_channel_state,
+                item,
+            ),
         )
