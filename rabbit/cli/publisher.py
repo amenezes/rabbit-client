@@ -8,7 +8,11 @@ from rabbit.publish import Publish
 
 class Publisher:
     def __init__(self, exchange_name: str, routing_key: str, **kwargs) -> None:
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
         self.client = AioRabbitClient()
         self.exchange_name = exchange_name
         self.routing_key = routing_key

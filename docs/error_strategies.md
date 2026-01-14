@@ -79,7 +79,11 @@ import asyncio
 from rabbit import AioRabbitClient, Subscribe, fibo
 from rabbit.job import async_echo_job
 
-loop = asyncio.get_event_loop()
+try:
+    loop = asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
 client = AioRabbitClient()
 loop.create_task(
