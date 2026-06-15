@@ -160,8 +160,9 @@ class Subscribe:
                     "Shutdown detected — draining pending ACK/DLQ (max 2s)..."
                 )
                 try:
-                    await asyncio.wait_for(shielded, timeout=2.0)
-                except asyncio.TimeoutError:
+                    if not shielded.done():
+                        await asyncio.wait_for(shielded, timeout=2.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
                     logger.warning(
                         "ACK/DLQ still pending after shutdown — "
                         "message will be redelivered by broker"

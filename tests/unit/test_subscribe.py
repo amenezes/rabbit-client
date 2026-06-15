@@ -19,7 +19,9 @@ async def test_register_subscribe_without_client_connected(subscribe):
         await subscribe.configure()
 
 
-async def test_run_dispatches_to_dlx_when_task_raises(subscribe_mock, monkeypatch, envelope_mock):
+async def test_run_dispatches_to_dlx_when_task_raises(
+    subscribe_mock, monkeypatch, envelope_mock
+):
     send_event_calls = []
 
     async def track_send_event(self, cause, body, envelope, properties):
@@ -43,7 +45,9 @@ async def test_run_drains_queue_after_error(subscribe_mock, monkeypatch, envelop
     assert subscribe_mock._job_queue.qsize() == 0
 
 
-async def test_run_acks_message_when_task_succeeds(subscribe_mock, monkeypatch, envelope_mock):
+async def test_run_acks_message_when_task_succeeds(
+    subscribe_mock, monkeypatch, envelope_mock
+):
     ack_called = False
 
     async def track_ack(self, envelope, multiple=False):
@@ -59,7 +63,9 @@ async def test_run_acks_message_when_task_succeeds(subscribe_mock, monkeypatch, 
     assert ack_called
 
 
-async def test_run_drains_queue_when_task_succeeds(subscribe_mock, monkeypatch, envelope_mock):
+async def test_run_drains_queue_when_task_succeeds(
+    subscribe_mock, monkeypatch, envelope_mock
+):
     async def success_task(body, envelope, properties):
         pass
 
@@ -69,12 +75,16 @@ async def test_run_drains_queue_when_task_succeeds(subscribe_mock, monkeypatch, 
 
 
 async def test_subscribe_callback_enqueues_one_item(subscribe_mock, envelope_mock):
-    await subscribe_mock.callback(None, b"test message", envelope_mock, PropertiesMock())
+    await subscribe_mock.callback(
+        None, b"test message", envelope_mock, PropertiesMock()
+    )
 
     assert subscribe_mock._job_queue.qsize() == 1
 
 
-async def test_subscribe_callback_preserves_enqueued_content(subscribe_mock, envelope_mock):
+async def test_subscribe_callback_preserves_enqueued_content(
+    subscribe_mock, envelope_mock
+):
     body = b"test message"
     envelope = envelope_mock
     properties = PropertiesMock()
@@ -116,6 +126,19 @@ def test_subscribe_attributes(attribute):
     assert hasattr(Subscribe, attribute)
 
 
+async def _setup_cancellation_test(
+    subscribe_mock, monkeypatch, envelope_mock, track_ack, track_send
+):
+    monkeypatch.setattr(subscribe_mock.__class__, "ack_event", track_ack)
+    monkeypatch.setattr(DLX, "send_event", track_send)
+
+    async def failing_task(body, envelope, properties):
+        raise ValueError("processing error")
+
+    subscribe_mock.task = failing_task
+    subscribe_mock._job_queue.put_nowait((b"body", envelope_mock, PropertiesMock()))
+
+
 async def test_run_survives_cancellation_during_dlx_send(
     subscribe_mock, monkeypatch, envelope_mock
 ):
@@ -130,13 +153,9 @@ async def test_run_survives_cancellation_during_dlx_send(
         nonlocal send_called
         send_called = True
 
-    async def failing_task(body, envelope, properties):
-        raise ValueError("processing error")
-
-    monkeypatch.setattr(subscribe_mock.__class__, "ack_event", track_ack)
-    monkeypatch.setattr(DLX, "send_event", track_send)
-    subscribe_mock.task = failing_task
-    subscribe_mock._job_queue.put_nowait((b"body", envelope_mock, PropertiesMock()))
+    await _setup_cancellation_test(
+        subscribe_mock, monkeypatch, envelope_mock, track_ack, track_send
+    )
 
     original_wait_for = asyncio.wait_for
     call_count = 0
@@ -155,6 +174,41 @@ async def test_run_survives_cancellation_during_dlx_send(
 
     assert ack_called
     assert send_called
+    assert call_count == 2
+
+
+async def test_run_survives_double_cancellation_during_dlx_send(
+    subscribe_mock, monkeypatch, envelope_mock
+):
+    ack_called = False
+    send_called = False
+
+    async def track_ack(self, envelope, multiple=False):
+        nonlocal ack_called
+        ack_called = True
+
+    async def track_send(self, cause, body, envelope, properties):
+        nonlocal send_called
+        send_called = True
+
+    await _setup_cancellation_test(
+        subscribe_mock, monkeypatch, envelope_mock, track_ack, track_send
+    )
+
+    call_count = 0
+
+    async def mock_wait_for(fut, timeout=None):
+        nonlocal call_count
+        call_count += 1
+        raise asyncio.CancelledError()
+
+    monkeypatch.setattr(asyncio, "wait_for", mock_wait_for)
+
+    with pytest.raises(asyncio.CancelledError):
+        await subscribe_mock._run()
+
+    assert not ack_called
+    assert not send_called
     assert call_count == 2
 
 

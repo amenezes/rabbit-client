@@ -91,7 +91,12 @@ async def test_persistent_connect_backoff(client, monkeypatch):
     monkeypatch.setattr(asyncio, "sleep", mock_sleep)
 
     task = asyncio.create_task(client.persistent_connect())
-    await _original_sleep(0.05)
+
+    for _ in range(50):
+        if connect_attempts >= 5:
+            break
+        await _original_sleep(0.01)
+
     task.cancel()
     await _original_sleep(0)
 

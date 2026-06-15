@@ -12,7 +12,7 @@ from aioamqp.exceptions import (
     SynchronizationError,
 )
 from aioamqp.protocol import AmqpProtocol
-from attrs import field, mutable
+from attrs import field, mutable, validators
 
 from .background_tasks import BackgroundTasks
 from .exceptions import AttributeNotInitialized, ClientNotConnectedError
@@ -26,7 +26,8 @@ class AioRabbitClient:
     _event = field(factory=asyncio.Event)
     _background_tasks: BackgroundTasks = field(factory=BackgroundTasks)
     _items: List = field(factory=list)
-    _channel_recovery_threshold: int = field(default=5)
+    _channel_recovery_threshold: int = field(default=5, validator=validators.gt(0))
+    _connection_recovery_threshold: int = field(default=2, validator=validators.gt(0))
 
     def __repr__(self) -> str:
         try:
@@ -104,7 +105,13 @@ class AioRabbitClient:
         self._background_tasks.add(name, task, *args, **kwargs)
 
     async def watch_connection_state(self, item) -> None:
-        """Reconfigure item when connection is re-established."""
+        """Reconfigure item when connection is re-established.
+
+        Unexpected errors (exceptions not in the known set of connection
+        errors) are retried up to ``_connection_recovery_threshold``
+        times with progressive backoff (5s, 10s, ...) before being
+        propagated, at which point the watcher task terminates.
+        """
         failures = 0
         unexpected = 0
         try:
@@ -140,7 +147,7 @@ class AioRabbitClient:
                         f"({unexpected}x)",
                         exc_info=True,
                     )
-                    if unexpected >= 3:
+                    if unexpected >= self._connection_recovery_threshold:
                         logger.critical(
                             f"Watcher for '{item.name}' failed "
                             f"{unexpected}x with unexpected errors. "
