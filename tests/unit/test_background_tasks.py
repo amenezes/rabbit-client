@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import pytest
 
@@ -40,3 +41,32 @@ def test_background_tasks_len(background_tasks):
 
 def test_background_tasks_repr(background_tasks):
     assert repr(background_tasks) == "BackgroundTasks(tasks=0, tasks_by_name=[])"
+
+
+async def test_background_tasks_discard_removes_failed_task(background_tasks):
+    async def failing_task():
+        raise ValueError("task error")
+
+    background_tasks.add("failing", failing_task)
+    task = background_tasks["failing"]
+
+    with pytest.raises(ValueError):
+        await task
+
+    assert "failing" not in background_tasks.tasks_by_name()
+
+
+async def test_background_tasks_discard_logs_warning_on_failure(
+    background_tasks, caplog
+):
+    async def failing_task():
+        raise ValueError("task error")
+
+    with caplog.at_level(logging.WARNING):
+        background_tasks.add("failing", failing_task)
+
+    task = background_tasks["failing"]
+    with pytest.raises(ValueError):
+        await task
+
+    assert any("Task 'failing' failed" in r.message for r in caplog.records)

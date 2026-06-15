@@ -17,9 +17,9 @@ def test_consumer_command(cli_runner):
     assert result.exit_code == 1
 
 
-def test_file_not_found_event_command(cli_runner):
+def test_send_event_missing_payload(cli_runner):
     result = cli_runner.invoke(send_event, [])
-    result.exit_code == 1
+    assert result.exit_code == 2
 
 
 async def test_consumer_connection_error():

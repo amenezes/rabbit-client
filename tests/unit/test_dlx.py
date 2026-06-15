@@ -2,7 +2,7 @@ import pytest
 
 from rabbit.dlx import DLX
 from rabbit.exceptions import OperationError
-from tests.conftest import EnvelopeMock, PropertiesMock
+from tests.conftest import PropertiesMock
 
 
 @pytest.mark.parametrize(
@@ -14,13 +14,34 @@ async def test_ensure_endswith_dlq(dlx, value, expected):
     assert result == expected
 
 
-async def test_send_event_error_without_client_connection(dlx):
+async def test_send_event_error_without_client_connection(dlx, envelope_mock):
     with pytest.raises(OperationError):
-        await dlx.send_event(Exception, bytes(), EnvelopeMock(), PropertiesMock())
+        await dlx.send_event(Exception, bytes(), envelope_mock, PropertiesMock())
 
 
-def test_dlx_repr(dlx):
-    assert isinstance(repr(dlx), str)
+async def test_dlx_get_properties_creates_default_headers(dlx, envelope_mock):
+    properties = PropertiesMock(headers=None)
+    result = await dlx._get_properties(
+        5000, ValueError("err"), envelope_mock, properties
+    )
+
+    assert result["expiration"] == "5000"
+    assert result["headers"]["x-delay"] == "5000"
+    assert result["headers"]["x-exception-message"] == "err"
+    assert result["headers"]["x-original-exchange"] == "src-exchange"
+    assert result["headers"]["x-original-routingKey"] == "#"
+
+
+async def test_dlx_get_properties_merges_original_headers(dlx, envelope_mock):
+    properties = PropertiesMock(
+        headers={"custom-key": "custom-value", "x-delay": "9999"}
+    )
+    result = await dlx._get_properties(
+        5000, ValueError("err"), envelope_mock, properties
+    )
+
+    assert result["headers"]["custom-key"] == "custom-value"
+    assert result["headers"]["x-delay"] == "9999"
 
 
 @pytest.mark.parametrize(
