@@ -89,7 +89,7 @@ class AioRabbitClient:
                     delay_s = 1
                 except (OSError, AmqpClosedConnection) as err:
                     logger.error(
-                        f"ConnectionError: [error='{err}', host='{kwargs.get('host')}', port={kwargs.get('port')}, login='{kwargs.get('login')}']"
+                        f"ConnectionError: [error='{err}', host='{kwargs.get('host')}', port={kwargs.get('port')}, login='***']"
                     )
                     if self.transport:
                         self.transport.close()
@@ -131,6 +131,7 @@ class AioRabbitClient:
                         f"({failures}x): {err}. "
                         "Retrying on next reconnection..."
                     )
+                    self._event.clear()
                     await asyncio.sleep(1)
                 except Exception:
                     unexpected += 1

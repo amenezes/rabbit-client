@@ -41,7 +41,7 @@ async def test_watch_connection_state_clears_event_after_recovery(
     task.cancel()
 
 
-async def test_watch_connection_state_does_not_clear_event_on_failure(
+async def test_watch_connection_state_clears_event_on_failure(
     client_mock, subscribe_mock, monkeypatch
 ):
     async def raising_get_channel():
@@ -53,7 +53,7 @@ async def test_watch_connection_state_does_not_clear_event_on_failure(
     task = asyncio.create_task(client_mock.watch_connection_state(subscribe_mock))
     await asyncio.sleep(0.5)
 
-    assert client_mock._event.is_set()
+    assert not client_mock._event.is_set()
     task.cancel()
 
 
