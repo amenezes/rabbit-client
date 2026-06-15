@@ -11,6 +11,7 @@ from ._wait import constant
 from .dlx import DLX
 from .exceptions import ClientNotConnectedError
 from .exchange import Exchange
+from .logger import logger
 from .queue import Queue
 
 
@@ -129,7 +130,7 @@ class Subscribe:
         try:
             body, envelope, properties = await self._job_queue.get()
         except Exception:
-            self._job_queue.task_done()
+            logger.error("Failed to get item from job queue", exc_info=True)
             return
 
         try:
