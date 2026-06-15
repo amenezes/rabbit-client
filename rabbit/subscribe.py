@@ -162,7 +162,7 @@ class Subscribe:
                 try:
                     if not shielded.done():
                         await asyncio.wait_for(shielded, timeout=2.0)
-                except (asyncio.TimeoutError, asyncio.CancelledError):
+                except asyncio.TimeoutError, asyncio.CancelledError:
                     logger.warning(
                         "ACK/DLQ still pending after shutdown — "
                         "message will be redelivered by broker"
