@@ -35,7 +35,7 @@ async def test_send_event_channel_closed_propagates(publish_mock):
 
 async def test_send_event_exchange_not_found(publish_mock):
     async def raise_no_exchange(*args, **kwargs):
-        raise ChannelClosed("PRECONDITION_FAILED - no exchange 'test-exchange'")
+        raise ChannelClosed(404, "NOT_FOUND - no exchange 'test-exchange' in vhost '/'")
 
     publish_mock.channel.publish = raise_no_exchange
 

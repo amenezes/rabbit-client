@@ -76,6 +76,6 @@ class Publish:
             )
         except ChannelClosed as err:
             logger.error(f"Channel closed while publishing: {err}")
-            if "no exchange" in err.args[0]:
+            if isinstance(err.message, str) and "no exchange" in err.message:
                 raise ExchangeNotFound(exchange_name) from err  # type: ignore[arg-type]
             raise

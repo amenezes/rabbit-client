@@ -26,6 +26,7 @@ class AioRabbitClient:
     _event = field(factory=asyncio.Event)
     _background_tasks: BackgroundTasks = field(factory=BackgroundTasks)
     _items: List = field(factory=list)
+    _channel_recovery_threshold: int = field(default=5)
 
     def __repr__(self) -> str:
         try:
@@ -104,6 +105,8 @@ class AioRabbitClient:
 
     async def watch_connection_state(self, item) -> None:
         """Reconfigure item when connection is re-established."""
+        failures = 0
+        unexpected = 0
         try:
             while True:
                 await self._event.wait()
@@ -111,6 +114,8 @@ class AioRabbitClient:
                     item.channel = await self.get_channel()
                     await item.configure()
                     self._event.clear()
+                    failures = 0
+                    unexpected = 0
                 except (
                     AmqpClosedConnection,
                     OSError,
@@ -120,17 +125,28 @@ class AioRabbitClient:
                     AttributeNotInitialized,
                     ClientNotConnectedError,
                 ) as err:
+                    failures += 1
                     logger.warning(
-                        f"Reconnection recovery failed for '{item.name}': {err}. "
+                        f"Reconnection recovery failed for '{item.name}' "
+                        f"({failures}x): {err}. "
                         "Retrying on next reconnection..."
                     )
                     await asyncio.sleep(1)
                 except Exception:
+                    unexpected += 1
                     logger.error(
-                        f"Unexpected error reconnecting '{item.name}'",
+                        f"Unexpected error reconnecting '{item.name}' "
+                        f"({unexpected}x)",
                         exc_info=True,
                     )
-                    await asyncio.sleep(5)
+                    if unexpected >= 3:
+                        logger.critical(
+                            f"Watcher for '{item.name}' failed "
+                            f"{unexpected}x with unexpected errors. "
+                            "Raising to stop infinite loop."
+                        )
+                        raise
+                    await asyncio.sleep(min(5 * unexpected, 60))
         except asyncio.CancelledError:
             raise
 
@@ -166,6 +182,14 @@ class AioRabbitClient:
                         f"Channel recovery failed for '{item.name}' "
                         f"({failures}x): {err}"
                     )
+                    if failures >= self._channel_recovery_threshold:
+                        logger.error(
+                            f"Channel recovery exceeded threshold "
+                            f"({self._channel_recovery_threshold}x) for "
+                            f"'{item.name}'. Triggering connection reset."
+                        )
+                        self._event.set()
+                        failures = 0
         except asyncio.CancelledError:
             raise
 

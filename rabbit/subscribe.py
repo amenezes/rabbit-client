@@ -87,10 +87,12 @@ class Subscribe:
 
     async def configure(self, channel: Union[None, Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
-        await self.qos(prefetch_count=self.concurrent)
-        await self._configure_queue()
-        await self._dlx.configure()
-        await self._configure_exchange()
+        await asyncio.gather(
+            self.qos(prefetch_count=self.concurrent),
+            self._configure_queue(),
+            self._dlx.configure(),
+            self._configure_exchange(),
+        )
         await self._configure_queue_bind()
 
     async def _configure_exchange(self) -> None:
@@ -139,11 +141,22 @@ class Subscribe:
             await self.ack_event(envelope, multiple=False)
         except Exception as cause:
             self._job_queue.task_done()
-            await asyncio.gather(
-                self.ack_event(envelope, multiple=False),
-                self._dlx.send_event(cause, body, envelope, properties),
-                return_exceptions=True,
-            )
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(
+                        asyncio.gather(
+                            self.ack_event(envelope, multiple=False),
+                            self._dlx.send_event(cause, body, envelope, properties),
+                            return_exceptions=True,
+                        )
+                    ),
+                    timeout=5.0,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "DLQ send timed out after 5s — "
+                    "message will be redelivered by broker"
+                )
 
     async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
         """Sends ack message to broker."""
