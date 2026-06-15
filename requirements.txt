@@ -1,4 +1,0 @@
-aioamqp>=0.15.0
-attrs>=19.1.0
-click
-rich

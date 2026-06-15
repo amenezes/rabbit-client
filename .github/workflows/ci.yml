@@ -8,26 +8,17 @@ jobs:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
         os: [ubuntu]
-      fail-fast: true
+      fail-fast: false
     runs-on: ${{ matrix.os }}-latest
     timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4
+    - uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
-        architecture: x64
-    - uses: actions/cache@v4
-      with:
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
-        path: ~/.cache/pip
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install Python dependencies
-      uses: py-actions/py-dependency-install@v2
-      with:
-        path: "./requirements-dev.txt"
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+    - name: Install dependencies
+      run: uv sync --dev --all-extras
     - name: Run lint & tests
-      run: |
-        make ci
-
+      run: make ci

@@ -4,31 +4,31 @@ VERSION := $(shell cat rabbit/__init__.py | grep '__version__ ' | cut -d'"' -f 2
 lint:
 ifeq ($(SKIP_STYLE), )
 	@echo "> running isort..."
-	isort rabbit
-	isort tests
+	uv run isort rabbit
+	uv run isort tests
 	@echo "> running black..."
-	black rabbit
-	black tests
+	uv run black rabbit
+	uv run black tests
 endif
 	@echo "> running flake8..."
-	flake8 rabbit
-	flake8 tests
+	uv run flake8 rabbit
+	uv run flake8 tests
 	@echo "> running mypy..."
-	mypy rabbit
+	uv run mypy rabbit
 
 tests:
 	@echo "> unittest"
-	python -m pytest -vv --no-cov-on-fail --color=yes --cov-report xml --cov-report term --cov=rabbit tests
+	uv run pytest -vv --no-cov-on-fail --color=yes --cov-report xml --cov-report term --cov=rabbit tests
 
 docs:
 	@echo "> generate project documentation..."
 	@cp README.md docs/index.md
-	mkdocs serve -a 0.0.0.0:8000
+	uv run mkdocs serve -a 0.0.0.0:8000
 
 install-deps:
 	@echo "> installing dependencies..."
-	uv pip install -r requirements-dev.txt
-	pre-commit install
+	uv sync --dev --all-extras
+	uv run pre-commit install
 
 about:
 	@echo "> rabbit-client: $(VERSION)"
@@ -41,9 +41,6 @@ about:
 	@echo "mailto: alexandre.fmenezes@gmail.com"
 
 ci: lint tests
-ifeq ($(GITHUB_HEAD_REF), false)
-	codecov --file coverage.xml -t $$CODECOV_TOKEN
-endif
 
 all: install-deps ci docs
 

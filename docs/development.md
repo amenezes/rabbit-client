@@ -24,10 +24,10 @@ make install-deps
 
 **option 2**
 
-Using pip
+Using uv
 
 ```bash
-pip install -r requirements-dev.txt
+uv sync --dev --all-extras
 ```
 
 ## Lint
