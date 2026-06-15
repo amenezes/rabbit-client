@@ -141,22 +141,32 @@ class Subscribe:
             await self.ack_event(envelope, multiple=False)
         except Exception as cause:
             self._job_queue.task_done()
-            try:
-                await asyncio.wait_for(
-                    asyncio.shield(
-                        asyncio.gather(
-                            self.ack_event(envelope, multiple=False),
-                            self._dlx.send_event(cause, body, envelope, properties),
-                            return_exceptions=True,
-                        )
-                    ),
-                    timeout=5.0,
+            shielded = asyncio.shield(
+                asyncio.gather(
+                    self.ack_event(envelope, multiple=False),
+                    self._dlx.send_event(cause, body, envelope, properties),
+                    return_exceptions=True,
                 )
+            )
+            try:
+                await asyncio.wait_for(shielded, timeout=5.0)
             except asyncio.TimeoutError:
                 logger.warning(
                     "DLQ send timed out after 5s — "
                     "message will be redelivered by broker"
                 )
+            except asyncio.CancelledError:
+                logger.warning(
+                    "Shutdown detected — draining pending ACK/DLQ (max 2s)..."
+                )
+                try:
+                    await asyncio.wait_for(shielded, timeout=2.0)
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "ACK/DLQ still pending after shutdown — "
+                        "message will be redelivered by broker"
+                    )
+                raise
 
     async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
         """Sends ack message to broker."""
