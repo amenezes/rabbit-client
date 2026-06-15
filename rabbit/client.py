@@ -68,43 +68,58 @@ class AioRabbitClient:
         self.transport, self.protocol = await aioamqp.connect(**kwargs)
 
     async def persistent_connect(self, **kwargs) -> None:
-        """Connect to message broker ensuring reconnection in case of error."""
+        """Connect and stay connected with exponential backoff.
+
+        Runs indefinitely — reconnects automatically on failure.
+        Cancel this task to stop reconnecting.
+        """
+        delay_s = 1
         while True:
             try:
                 self.transport, self.protocol = await aioamqp.connect(**kwargs)
                 await self.protocol.wait_closed()
                 self.transport.close()
+                delay_s = 1
             except (OSError, AmqpClosedConnection) as err:
                 logger.error(
                     f"ConnectionError: [error='{err}', host='{kwargs.get('host')}', port={kwargs.get('port')}, login='{kwargs.get('login')}']"
                 )
-                await asyncio.sleep(5)
-                await self.persistent_connect(**kwargs)
+                if self.transport:
+                    self.transport.close()
+                await asyncio.sleep(delay_s)
+                delay_s = min(delay_s * 2, 300)
 
     async def register_watch(self, name: str, task, *args, **kwargs) -> None:
         self._background_tasks.add(name, task, *args, **kwargs)
 
     async def watch_connection_state(self, item) -> None:
-        logger.debug("Watch connection enabled")
-        self._event.clear()
-        await self._event.wait()
-
-        logger.error("Connection to RabbitMQ lost")
-        logger.warning("Trying to establish a new connection...")
-        item.channel = await self.get_channel()
-        await item.configure()
-        logger.warning("Connection restored")
+        """Reconfigure item when connection is re-established."""
+        while True:
+            await self._event.wait()
+            try:
+                item.channel = await self.get_channel()
+                await item.configure()
+                self._event.clear()
+            except (AmqpClosedConnection, OSError, AttributeNotInitialized):
+                await asyncio.sleep(1)
 
     async def watch_channel_state(self, item) -> None:
+        """Recover closed channels on the current connection."""
+        failures = 0
         while True:
             await asyncio.sleep(5)
-            logger.debug(f"Channel on '{item.name}' is open: {item.channel.is_open}")
-            if not item.channel.is_open:
-                try:
-                    item.channel = await self.get_channel()
-                    await item.configure()
-                except AmqpClosedConnection:
-                    pass
+            if item.channel.is_open:
+                failures = 0
+                continue
+            try:
+                item.channel = await self.get_channel()
+                await item.configure()
+                failures = 0
+            except AmqpClosedConnection as err:
+                failures += 1
+                logger.warning(
+                    f"Channel recovery failed for '{item.name}' ({failures}x): {err}"
+                )
 
     async def register(self, item) -> None:
         await asyncio.sleep(random.uniform(1.0, 1.5))

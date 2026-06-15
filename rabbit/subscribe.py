@@ -130,15 +130,20 @@ class Subscribe:
     async def _run(self) -> None:
         try:
             body, envelope, properties = await self._job_queue.get()
+        except Exception:
+            self._job_queue.task_done()
+            return
+
+        try:
             await self.task(body, envelope, properties)
             self._job_queue.task_done()
             await self.ack_event(envelope, multiple=False)
         except Exception as cause:
-            await asyncio.shield(
-                asyncio.gather(
-                    self.ack_event(envelope, multiple=False),
-                    self._dlx.send_event(cause, body, envelope, properties),
-                )
+            self._job_queue.task_done()
+            await asyncio.gather(
+                self.ack_event(envelope, multiple=False),
+                self._dlx.send_event(cause, body, envelope, properties),
+                return_exceptions=True,
             )
 
     async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
