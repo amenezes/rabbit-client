@@ -21,10 +21,14 @@ rabbit-client provides a simple and automatic configuration to work with:
 
 ## Installing
 
-Install and update using pip:
+Install and update using [uv](https://docs.astral.sh/uv/):
 
 ```bash
-pip install -U rabbit-client
+# Add as a project dependency (recommended)
+uv add rabbit-client
+
+# Or install globally / in any virtual environment
+uv pip install -U rabbit-client
 ```
 
 ## Links

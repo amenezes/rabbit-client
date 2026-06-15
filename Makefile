@@ -6,16 +6,13 @@ ifeq ($(SKIP_STYLE), )
 	@echo "> running isort..."
 	isort rabbit
 	isort tests
-	isort setup.py
 	@echo "> running black..."
 	black rabbit
 	black tests
-	black setup.py
 endif
 	@echo "> running flake8..."
 	flake8 rabbit
 	flake8 tests
-	flake8 setup.py
 	@echo "> running mypy..."
 	mypy rabbit
 
@@ -33,15 +30,10 @@ install-deps:
 	uv pip install -r requirements-dev.txt
 	pre-commit install
 
-tox:
-	@echo "> running tox..."
-	tox -r -p all
-
 about:
 	@echo "> rabbit-client: $(VERSION)"
 	@echo ""
 	@echo "make lint         - Runs: [isort > black > flake8 > mypy]"
-	@echo "make tox          - Runs tox."
 	@echo "make tests        - Execute tests."
 	@echo "make docs         - Generate project documentation."
 	@echo "make install-deps - Install development dependencies."
@@ -53,6 +45,6 @@ ifeq ($(GITHUB_HEAD_REF), false)
 	codecov --file coverage.xml -t $$CODECOV_TOKEN
 endif
 
-all: install-deps ci tox docs
+all: install-deps ci docs
 
-.PHONY: install-deps lint tests docs tox ci all
+.PHONY: install-deps lint tests docs ci all

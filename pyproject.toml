@@ -1,8 +1,141 @@
 [build-system]
-requires = [
-    "setuptools >= 46.4.0",
+requires = ["flit_core>=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "rabbit-client"
+dynamic = ["version"]
+description = "async rabbit client"
+authors = [
+  { name = "Alexandre Menezes", email = "alexandre.fmenezes@proton.me" },
 ]
-build-backend = "setuptools.build_meta"
+license = { text = "Apache-2.0" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Framework :: AsyncIO",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Object Brokering",
+    "Topic :: System :: Distributed Computing",
+]
+keywords = ["asyncio", "aioamqp", "amqp", "rabbitmq"]
+requires-python = ">=3.8"
+dependencies = [
+    "aioamqp>=0.15.0",
+    "attrs>=19.1.0",
+]
+
+[project.scripts]
+rabbit = "rabbit.__main__:cli"
+
+[project.optional-dependencies]
+cli = ["click>=8.1.3", "rich>=12.6.0"]
+all = ["click>=8.1.3", "rich>=12.6.0"]
+
+[project.urls]
+Documentation = "https://rabbit-client.amenezes.net"
+Code = "https://github.com/amenezes/rabbit-client"
+"Issue tracker" = "https://github.com/amenezes/rabbit-client/issues"
+Changes = "https://github.com/amenezes/rabbit-client/releases"
+
+[dependency-groups]
+dev = [
+    "black",
+    "codecov",
+    "coverage",
+    "flake8",
+    "Flake8-pyproject",
+    "isort",
+    "mkdocs-material",
+    "mypy",
+    "pip-audit",
+    "pre-commit",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+]
+
+[tool.black]
+target-version = ["py314"]
 
 [tool.isort]
 profile = "black"
+
+[tool.flit.module]
+name = "rabbit"
+
+[tool.flit.sdist]
+include = [
+    "rabbit/*",
+    "README.md",
+]
+exclude = [
+    "__pycache__/",
+    "*.pyc",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+files = ["rabbit"]
+show_error_context = true
+verbosity = 0
+ignore_missing_imports = true
+check_untyped_defs = true
+extra_checks = true
+strict_equality = true
+no_implicit_optional = true
+no_implicit_reexport = true
+warn_unused_configs = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_unreachable = true
+disallow_untyped_calls = true
+
+[tool.flake8]
+exclude = ["venv", "__pycache__", "*.pyc", "__init__.py"]
+ignore = ["E501", "W503"]
+verbose = 2
+doctests = true
+show_source = true
+statistics = true
+count = true
+
+[tool.coverage.run]
+branch = true
+omit = ["**/__init__.py", "rabbit/__version__.py"]
+
+[tool.coverage.report]
+show_missing = true
+sort = "Miss"
+precision = 2
+exclude_lines = [
+    "logging.info",
+    "logging.debug",
+    "logging.warn",
+    "logging.error",
+]
+
+[tool.coverage.paths]
+source = ["rabbit"]
+
+[tool.coverage.html]
+directory = "."
+
+[tool.coverage.xml]
+output = "coverage.xml"
