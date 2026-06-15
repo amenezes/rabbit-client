@@ -95,3 +95,22 @@ async def test_subscribe_callback_nacks_when_queue_full(
 )
 def test_subscribe_attributes(attribute):
     assert hasattr(Subscribe, attribute)
+
+
+async def test_subscribe_run_does_not_call_task_done_when_queue_get_fails(
+    subscribe_mock, monkeypatch
+):
+    task_done_calls = []
+
+    async def mock_get():
+        raise RuntimeError("queue error")
+
+    def mock_task_done():
+        task_done_calls.append(True)
+
+    monkeypatch.setattr(subscribe_mock._job_queue, "get", mock_get)
+    monkeypatch.setattr(subscribe_mock._job_queue, "task_done", mock_task_done)
+
+    await subscribe_mock._run()
+
+    assert len(task_done_calls) == 0

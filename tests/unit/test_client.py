@@ -130,3 +130,33 @@ async def test_watch_channel_state_recovers_closed_channel(
 @pytest.mark.parametrize("attribute", ["transport", "server_properties", "protocol"])
 def test_client_attributes(attribute):
     assert hasattr(AioRabbitClient, attribute)
+
+
+async def test_persistent_connect_closes_transport_on_cancellation(client, monkeypatch):
+    close_calls = []
+
+    class MockTransport:
+        def close(self):
+            close_calls.append(True)
+
+    transport = MockTransport()
+
+    async def mock_wait_closed(self):
+        await asyncio.Event().wait()
+
+    protocol = type("MockProtocol", (), {"wait_closed": mock_wait_closed})()
+
+    async def mock_connect(**kwargs):
+        return transport, protocol
+
+    monkeypatch.setattr(aioamqp, "connect", mock_connect)
+
+    task = asyncio.create_task(client.persistent_connect())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+    assert len(close_calls) >= 1
