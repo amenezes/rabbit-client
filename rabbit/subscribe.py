@@ -1,11 +1,9 @@
 import asyncio
 import os
-from contextlib import suppress
 from typing import Callable, Union
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
-from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 from attrs import field, mutable, validators
 
@@ -13,6 +11,7 @@ from ._wait import constant
 from .dlx import DLX
 from .exceptions import ClientNotConnectedError
 from .exchange import Exchange
+from .logger import logger
 from .queue import Queue
 
 
@@ -88,11 +87,13 @@ class Subscribe:
 
     async def configure(self, channel: Union[None, Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
-        await self.qos(prefetch_count=self.concurrent)
-        with suppress(SynchronizationError):
-            await asyncio.gather(self._configure_queue(), self._dlx.configure())
-            await self._configure_exchange()
-            await self._configure_queue_bind()
+        await asyncio.gather(
+            self.qos(prefetch_count=self.concurrent),
+            self._configure_queue(),
+            self._dlx.configure(),
+            self._configure_exchange(),
+        )
+        await self._configure_queue_bind()
 
     async def _configure_exchange(self) -> None:
         await self.channel.exchange_declare(
@@ -130,16 +131,43 @@ class Subscribe:
     async def _run(self) -> None:
         try:
             body, envelope, properties = await self._job_queue.get()
+        except Exception:
+            logger.error("Failed to get item from job queue", exc_info=True)
+            return
+
+        try:
             await self.task(body, envelope, properties)
             self._job_queue.task_done()
             await self.ack_event(envelope, multiple=False)
         except Exception as cause:
-            await asyncio.shield(
+            self._job_queue.task_done()
+            shielded = asyncio.shield(
                 asyncio.gather(
                     self.ack_event(envelope, multiple=False),
                     self._dlx.send_event(cause, body, envelope, properties),
+                    return_exceptions=True,
                 )
             )
+            try:
+                await asyncio.wait_for(shielded, timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "DLQ send timed out after 5s — "
+                    "message will be redelivered by broker"
+                )
+            except asyncio.CancelledError:
+                logger.warning(
+                    "Shutdown detected — draining pending ACK/DLQ (max 2s)..."
+                )
+                try:
+                    if not shielded.done():
+                        await asyncio.wait_for(shielded, timeout=2.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    logger.warning(
+                        "ACK/DLQ still pending after shutdown — "
+                        "message will be redelivered by broker"
+                    )
+                raise
 
     async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
         """Sends ack message to broker."""

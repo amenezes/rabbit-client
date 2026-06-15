@@ -1,16 +1,13 @@
 import pytest
+from aioamqp.exceptions import ChannelClosed
 
 from rabbit import Publish
-from rabbit.exceptions import ClientNotConnectedError
-
-
-async def test_send_event(publish_mock):
-    await publish_mock.send_event(123)
+from rabbit.exceptions import ClientNotConnectedError, ExchangeNotFound
 
 
 def test_register_publish_without_client_connected(publish):
     with pytest.raises(ClientNotConnectedError):
-        hasattr(publish, "channel")
+        _ = publish.channel
 
 
 def test_publish_repr(publish_mock):
@@ -24,6 +21,29 @@ async def test_publish_confirms_disabled(publish):
 async def test_publish_confirms_enabled():
     publish = Publish(True)
     assert publish.publish_confirms is True
+
+
+async def test_send_event_channel_closed_propagates(publish_mock):
+    async def _raise(*args, **kwargs):
+        raise ChannelClosed("PRECONDITION_FAILED - channel closed")
+
+    publish_mock.channel.publish = _raise
+
+    with pytest.raises(ChannelClosed):
+        await publish_mock.send_event(b"test")
+
+
+async def test_send_event_exchange_not_found(publish_mock):
+    async def raise_no_exchange(*args, **kwargs):
+        raise ChannelClosed(404, "NOT_FOUND - no exchange 'test-exchange' in vhost '/'")
+
+    publish_mock.channel.publish = raise_no_exchange
+
+    with pytest.raises(ExchangeNotFound) as exc_info:
+        await publish_mock.send_event(b"test")
+
+    assert "default.in.exchange" in str(exc_info.value)
+    assert isinstance(exc_info.value.__cause__, ChannelClosed)
 
 
 @pytest.mark.parametrize(

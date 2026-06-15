@@ -201,3 +201,8 @@ def queue():
 @pytest.fixture
 def exchange():
     return Exchange(name="exchange", exchange_type="topic", topic="#")
+
+
+@pytest.fixture
+def envelope_mock():
+    return EnvelopeMock()

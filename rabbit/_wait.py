@@ -14,7 +14,7 @@ def expo(
     """Exponential delay strategy."""
     delay = delay or int(os.getenv("EXPO_DELAY", 300000))
     base = base or int(os.getenv("EXPO_BASE", 2))
-    factor = factor = int(os.getenv("EXPO_FACTOR", 1))
+    factor = factor if factor is not None else int(os.getenv("EXPO_FACTOR", 1))
     max_delay = max_delay or os.getenv("EXPO_MAX_DELAY")  # type: ignore
     if max_delay:
         max_delay = int(max_delay)

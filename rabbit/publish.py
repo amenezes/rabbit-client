@@ -6,6 +6,7 @@ from aioamqp.exceptions import ChannelClosed
 from attrs import field, mutable, validators
 
 from rabbit.exceptions import ClientNotConnectedError
+from rabbit.logger import logger
 
 from .exceptions import ExchangeNotFound
 
@@ -74,6 +75,7 @@ class Publish:
                 **kwargs,
             )
         except ChannelClosed as err:
-            await self.configure()
-            if err.message.find("no exchange") > 0:
-                raise ExchangeNotFound(exchange_name)  # type: ignore
+            logger.error(f"Channel closed while publishing: {err}")
+            if isinstance(err.message, str) and "no exchange" in err.message:
+                raise ExchangeNotFound(exchange_name) from err  # type: ignore[arg-type]
+            raise

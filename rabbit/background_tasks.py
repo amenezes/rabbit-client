@@ -31,6 +31,8 @@ class BackgroundTasks:
             self._tasks.update({name: task_runner})
 
     def discard(self, task: asyncio.Task) -> None:
+        if not task.cancelled() and task.exception() is not None:
+            logger.warning(f"Task '{task.get_name()}' failed: {task.exception()}")
         with suppress(KeyError):
             del self._tasks[task.get_name()]
 

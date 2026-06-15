@@ -21,20 +21,19 @@ DELAY_HEADER = {"x-delay": 1}
     ],
 )
 def test_constant_wait(delay, expected):
-    for x in range(0, 11):
-        current_delay = constant({"x-delay": delay}, delay)
-        assert current_delay == expected
+    assert constant({"x-delay": delay}, delay) == expected
 
 
-def test_constant_delay_update(monkeypatch):
+def test_constant_delay_uses_env_var_when_no_delay_arg(monkeypatch):
     monkeypatch.setenv("CONSTANT_DELAY", "3000")
-    expected = 3000
-    for x in range(0, 11):
-        if x == 5:
-            monkeypatch.setenv("CONSTANT_DELAY", "1000")
-            expected = 1000
-        current_delay = constant({"x-delay": expected})
-        assert current_delay == expected
+    assert constant(None) == 3000
+
+
+def test_constant_delay_updates_when_env_var_changes(monkeypatch):
+    monkeypatch.setenv("CONSTANT_DELAY", "3000")
+    constant(None)
+    monkeypatch.setenv("CONSTANT_DELAY", "1000")
+    assert constant(None) == 1000
 
 
 @pytest.mark.parametrize(
@@ -74,21 +73,30 @@ def test_expo_wait(delay, expected):
     assert expo({"x-delay": delay}, delay) == expected
 
 
-def test_expo():
-    delay = 300000
-    for it in range(0, 11):
-        current_delay = expo({"x-delay": delay}, delay)
-        delay *= 2
-        assert current_delay == delay
+def test_expo_doubles_delay():
+    assert expo(None, delay=300000) == 600000
+
+
+def test_expo_with_header_uses_header_value():
+    assert expo({"x-delay": 5000}, delay=300000) == 10000
 
 
 def test_expo_without_header():
     assert expo(None) == 600000
 
 
-def test_expo_without_header_with_max_delay():
-    delay = 1
-    for it in range(10):
-        current_delay = expo(None, delay=delay, max_delay=80)
-        delay += current_delay
-    assert current_delay == 80
+def test_expo_factor_zero():
+    assert expo(None, delay=300000, factor=0) == 0
+
+
+@pytest.mark.parametrize(
+    "delay,max_delay,expected",
+    [
+        (200, 80, 80),
+        (40, 80, 80),
+        (39, 80, 78),
+        (1, 80, 2),
+    ],
+)
+def test_expo_respeita_max_delay(delay, max_delay, expected):
+    assert expo(None, delay=delay, max_delay=max_delay) == expected
