@@ -5,12 +5,17 @@ from uuid import uuid4
 
 import aioamqp
 from aioamqp.channel import Channel
-from aioamqp.exceptions import AmqpClosedConnection
+from aioamqp.exceptions import (
+    AmqpClosedConnection,
+    ChannelClosed,
+    NoChannelAvailable,
+    SynchronizationError,
+)
 from aioamqp.protocol import AmqpProtocol
 from attrs import field, mutable
 
 from .background_tasks import BackgroundTasks
-from .exceptions import AttributeNotInitialized
+from .exceptions import AttributeNotInitialized, ClientNotConnectedError
 from .logger import logger
 
 
@@ -100,33 +105,65 @@ class AioRabbitClient:
                 item.channel = await self.get_channel()
                 await item.configure()
                 self._event.clear()
-            except (AmqpClosedConnection, OSError, AttributeNotInitialized):
+            except (
+                AmqpClosedConnection,
+                OSError,
+                ChannelClosed,
+                SynchronizationError,
+                NoChannelAvailable,
+                AttributeNotInitialized,
+                ClientNotConnectedError,
+            ) as err:
+                logger.warning(
+                    f"Reconnection recovery failed for '{item.name}': {err}. "
+                    "Retrying on next reconnection..."
+                )
                 await asyncio.sleep(1)
+            except Exception:
+                logger.error(
+                    f"Unexpected error reconnecting '{item.name}'",
+                    exc_info=True,
+                )
+                await asyncio.sleep(5)
 
     async def watch_channel_state(self, item) -> None:
         """Recover closed channels on the current connection."""
         failures = 0
         while True:
             await asyncio.sleep(5)
-            if item.channel.is_open:
-                failures = 0
+            try:
+                if item.channel.is_open:
+                    failures = 0
+                    continue
+            except (ClientNotConnectedError, AttributeError):
+                await asyncio.sleep(1)
                 continue
+
             try:
                 item.channel = await self.get_channel()
                 await item.configure()
                 failures = 0
-            except AmqpClosedConnection as err:
+            except (
+                AmqpClosedConnection,
+                OSError,
+                ChannelClosed,
+                SynchronizationError,
+                NoChannelAvailable,
+                AttributeNotInitialized,
+                ClientNotConnectedError,
+            ) as err:
                 failures += 1
                 logger.warning(
-                    f"Channel recovery failed for '{item.name}' ({failures}x): {err}"
+                    f"Channel recovery failed for '{item.name}' "
+                    f"({failures}x): {err}"
                 )
 
     async def register(self, item) -> None:
         await asyncio.sleep(random.uniform(1.0, 1.5))
-        self._items.append(item)
         task_id = uuid4().hex
         item.channel = await self.get_channel()
         await item.configure()
+        self._items.append(item)
         await self.register_watch(
             f"{item.name}-watch-connection-state-{task_id}",
             self.watch_connection_state,

@@ -1,11 +1,9 @@
 import asyncio
 import os
-from contextlib import suppress
 from typing import Callable, Union
 
 from aioamqp.channel import Channel
 from aioamqp.envelope import Envelope
-from aioamqp.exceptions import SynchronizationError
 from aioamqp.properties import Properties
 from attrs import field, mutable, validators
 
@@ -89,10 +87,10 @@ class Subscribe:
     async def configure(self, channel: Union[None, Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
         await self.qos(prefetch_count=self.concurrent)
-        with suppress(SynchronizationError):
-            await asyncio.gather(self._configure_queue(), self._dlx.configure())
-            await self._configure_exchange()
-            await self._configure_queue_bind()
+        await self._configure_queue()
+        await self._dlx.configure()
+        await self._configure_exchange()
+        await self._configure_queue_bind()
 
     async def _configure_exchange(self) -> None:
         await self.channel.exchange_declare(
