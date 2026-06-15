@@ -13,9 +13,6 @@ license = { text = "Apache-2.0" }
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -68,7 +65,7 @@ dev = [
 ]
 
 [tool.black]
-target-version = ["py314"]
+target-version = ["py311", "py312", "py313", "py314"]
 
 [tool.isort]
 profile = "black"

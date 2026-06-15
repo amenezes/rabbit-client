@@ -168,7 +168,7 @@ class AioRabbitClient:
                     if item.channel.is_open:
                         failures = 0
                         continue
-                except ClientNotConnectedError, AttributeError:
+                except (ClientNotConnectedError, AttributeError):
                     await asyncio.sleep(1)
                     continue
 
