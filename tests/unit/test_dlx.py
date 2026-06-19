@@ -49,3 +49,22 @@ async def test_dlx_get_properties_merges_original_headers(dlx, envelope_mock):
 )
 def test_dlx_attributes(attribute):
     assert hasattr(DLX, attribute)
+
+
+async def test_dlx_configure_runs_channel_commands_sequentially(
+    dlx, recording_channel, skip_configure_delays
+):
+    # Regression: bug-rabbit-client_8.md — DLX.configure() também exigia sequencial.
+    dlx.channel = recording_channel
+
+    await dlx.configure()
+
+    method_order = [name for name, _ in recording_channel.calls]
+    assert method_order == [
+        "queue_declare",
+        "exchange_declare",
+        "exchange_declare",
+        "queue_bind",
+        "queue_bind",
+    ]
+    assert recording_channel.overlaps == 0
