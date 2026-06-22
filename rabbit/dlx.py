@@ -42,24 +42,24 @@ class DLX:
 
     async def configure(self) -> None:
         """Configure DLX channel, queues and exchange."""
+        # Sequential on same AMQP channel — see bug-rabbit-client_8.md.
         try:
-            await asyncio.gather(self._configure_queue(), self._configure_exchange())
+            await self._configure_queue()
+            await self._configure_exchange()
             await self._configure_queue_bind()
         except AttributeNotInitialized:
             logger.debug("Waiting client initialization...DLX")
 
     async def _configure_exchange(self) -> None:
-        await asyncio.gather(
-            self._channel.exchange_declare(
-                exchange_name=self.exchange.name,
-                type_name=self.exchange.exchange_type,
-                durable=self.exchange.durable,
-            ),
-            self._channel.exchange_declare(
-                exchange_name=self.dlq_exchange.name,
-                type_name=self.dlq_exchange.exchange_type,
-                durable=self.dlq_exchange.durable,
-            ),
+        await self._channel.exchange_declare(
+            exchange_name=self.exchange.name,
+            type_name=self.exchange.exchange_type,
+            durable=self.exchange.durable,
+        )
+        await self._channel.exchange_declare(
+            exchange_name=self.dlq_exchange.name,
+            type_name=self.dlq_exchange.exchange_type,
+            durable=self.dlq_exchange.durable,
         )
         await asyncio.sleep(1.5)
 
@@ -73,17 +73,15 @@ class DLX:
 
     async def _configure_queue_bind(self) -> None:
         queue_name = await self._ensure_endswith_dlq(self.queue.name)
-        await asyncio.gather(
-            self._channel.queue_bind(
-                exchange_name=self.exchange.name,
-                queue_name=queue_name,
-                routing_key=self.queue.name,
-            ),
-            self._channel.queue_bind(
-                exchange_name=self.dlq_exchange.name,
-                queue_name=self.queue.name,
-                routing_key=self.dlq_exchange.topic,
-            ),
+        await self._channel.queue_bind(
+            exchange_name=self.exchange.name,
+            queue_name=queue_name,
+            routing_key=self.queue.name,
+        )
+        await self._channel.queue_bind(
+            exchange_name=self.dlq_exchange.name,
+            queue_name=self.queue.name,
+            routing_key=self.dlq_exchange.topic,
         )
 
     async def _ensure_endswith_dlq(self, value: str) -> str:

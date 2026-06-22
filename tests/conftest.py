@@ -71,6 +71,41 @@ class ChannelMock:
         self.publisher_confirms = True
 
 
+class RecordingChannelMock:
+    # Detects overlapping in-flight RPCs: AMQP channels are single-threaded, so
+    # concurrent RPCs (asyncio.gather) corrupt broker state. See bug-rabbit-client_8.md.
+    def __init__(self):
+        self.calls = []
+        self.overlaps = 0
+        self._in_flight = 0
+
+    async def _rpc(self, name, key):
+        self._in_flight += 1
+        if self._in_flight > 1:
+            self.overlaps += 1
+        self.calls.append((name, key))
+        await asyncio.sleep(0)
+        self._in_flight -= 1
+
+    async def basic_qos(self, **kwargs):
+        await self._rpc("basic_qos", kwargs.get("prefetch_count"))
+
+    async def queue_declare(self, **kwargs):
+        await self._rpc("queue_declare", kwargs.get("queue_name"))
+
+    async def exchange_declare(self, **kwargs):
+        await self._rpc("exchange_declare", kwargs.get("exchange_name"))
+
+    async def queue_bind(self, **kwargs):
+        await self._rpc(
+            "queue_bind",
+            (kwargs.get("exchange_name"), kwargs.get("queue_name")),
+        )
+
+    async def basic_consume(self, **kwargs):
+        await self._rpc("basic_consume", kwargs.get("queue_name"))
+
+
 class TransportMock:
     def __init__(self):
         self.transport = "transport"
@@ -206,3 +241,22 @@ def exchange():
 @pytest.fixture
 def envelope_mock():
     return EnvelopeMock()
+
+
+@pytest.fixture
+def recording_channel():
+    return RecordingChannelMock()
+
+
+@pytest.fixture
+def skip_configure_delays(monkeypatch):
+    # sleep(0) MUST stay a real yield — it exposes asyncio.gather interleaving.
+    # Only the >0 guard sleeps (1.5s) are skipped for speed.
+    real_sleep = asyncio.sleep
+
+    async def fast_sleep(delay, *args, **kwargs):
+        if delay and delay > 0:
+            return
+        await real_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", fast_sleep)

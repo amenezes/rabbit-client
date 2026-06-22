@@ -4,6 +4,7 @@ import pytest
 
 from rabbit.dlx import DLX
 from rabbit.exceptions import ClientNotConnectedError
+from rabbit.job import async_echo_job
 from rabbit.subscribe import Subscribe
 from tests.conftest import PropertiesMock
 
@@ -229,3 +230,39 @@ async def test_subscribe_run_does_not_call_task_done_when_queue_get_fails(
     await subscribe_mock._run()
 
     assert len(task_done_calls) == 0
+
+
+async def test_configure_runs_channel_commands_sequentially(
+    subscribe, recording_channel, skip_configure_delays
+):
+    # Regression: bug-rabbit-client_8.md — canais AMQP exigem RPC sequencial.
+    subscribe.channel = recording_channel
+
+    await subscribe.configure()
+
+    method_order = [name for name, _ in recording_channel.calls]
+    assert method_order == [
+        "basic_qos",
+        "queue_declare",
+        "queue_declare",
+        "exchange_declare",
+        "exchange_declare",
+        "queue_bind",
+        "queue_bind",
+        "exchange_declare",
+        "queue_bind",
+        "basic_consume",
+    ]
+    assert recording_channel.overlaps == 0
+
+
+@pytest.mark.parametrize("concurrent", [1, 4, 16])
+async def test_configure_sets_basic_qos_prefetch_to_concurrent(
+    concurrent, recording_channel, skip_configure_delays
+):
+    subscribe = Subscribe(task=async_echo_job, concurrent=concurrent)
+    subscribe.channel = recording_channel
+
+    await subscribe.configure()
+
+    assert recording_channel.calls[0] == ("basic_qos", concurrent)

@@ -87,12 +87,13 @@ class Subscribe:
 
     async def configure(self, channel: Union[None, Channel] = None) -> None:
         """Configure subscriber channel, queues and exchange."""
-        await asyncio.gather(
-            self.qos(prefetch_count=self.concurrent),
-            self._configure_queue(),
-            self._dlx.configure(),
-            self._configure_exchange(),
-        )
+        # Sequential by requirement: AMQP 0-9-1 channels are single-threaded RPC
+        # queues and aioamqp does not serialize concurrent calls; asyncio.gather
+        # would interleave frames and leave messages permanently Unacked (bug-rabbit-client_8).
+        await self.qos(prefetch_count=self.concurrent)
+        await self._configure_queue()
+        await self._dlx.configure()
+        await self._configure_exchange()
         await self._configure_queue_bind()
 
     async def _configure_exchange(self) -> None:
