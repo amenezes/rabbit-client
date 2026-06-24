@@ -98,27 +98,6 @@ async def test_subscribe_callback_preserves_enqueued_content(
     assert queued[2] is properties
 
 
-async def test_subscribe_callback_nacks_when_queue_full(
-    subscribe_mock, monkeypatch, envelope_mock
-):
-    nack_called = False
-
-    async def track_nack(self, envelope, multiple=False, requeue=True):
-        nonlocal nack_called
-        nack_called = True
-
-    monkeypatch.setattr(subscribe_mock.__class__, "nack_event", track_nack)
-
-    subscribe_mock._job_queue.put_nowait((b"first", envelope_mock, PropertiesMock()))
-
-    with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(
-            subscribe_mock.callback(None, b"second", envelope_mock, PropertiesMock()),
-            timeout=0.1,
-        )
-
-    assert nack_called
-
 
 @pytest.mark.parametrize(
     "attribute", ["task", "exchange", "queue", "concurrent", "delay_strategy"]
@@ -266,3 +245,38 @@ async def test_configure_sets_basic_qos_prefetch_to_concurrent(
     await subscribe.configure()
 
     assert recording_channel.calls[0] == ("basic_qos", concurrent)
+
+
+async def test_run_serialized_by_semaphore_when_concurrent_1(
+    subscribe_mock, envelope_mock
+):
+    subscribe_mock._semaphore = asyncio.Semaphore(1)
+
+    running = 0
+    max_concurrent = 0
+    started = asyncio.Event()
+
+    async def slow_task(body, envelope, properties):
+        nonlocal running, max_concurrent
+        running += 1
+        max_concurrent = max(max_concurrent, running)
+        started.set()
+        await asyncio.sleep(0.1)
+        running -= 1
+
+    subscribe_mock.task = slow_task
+    subscribe_mock._job_queue.put_nowait((b"msg1", envelope_mock, PropertiesMock()))
+
+    t1 = asyncio.create_task(subscribe_mock._run())
+    await started.wait()
+
+    subscribe_mock._job_queue.put_nowait((b"msg2", envelope_mock, PropertiesMock()))
+    t2 = asyncio.create_task(subscribe_mock._run())
+
+    await asyncio.sleep(0.05)
+    assert running == 1
+    assert max_concurrent == 1
+
+    await asyncio.gather(t1, t2)
+    assert max_concurrent == 1
+    assert running == 0
