@@ -1,167 +1,123 @@
-import asyncio
-
+import aio_pika
 import pytest
 
-from rabbit.client import AioRabbitClient, aioamqp
-from rabbit.exceptions import AttributeNotInitialized
-from rabbit.subscribe import Subscribe
-from tests.conftest import AioAmqpMock
+from rabbit.client import AioRabbitClient
 
 
-async def aioamqp_mock(*args, **kwargs):
-    aioamqp_mock = AioAmqpMock()
-    transport, protocol = await aioamqp_mock.connect(args, kwargs)
-    return transport, protocol
+async def test_connect_and_channel(client, monkeypatch):
+    connect_calls = 0
+
+    async def mock_connect_robust(*args, **kwargs):
+        nonlocal connect_calls
+        connect_calls += 1
+        return aio_pika.RobustConnection
+
+    monkeypatch.setattr(aio_pika, "connect_robust", mock_connect_robust)
+
+    await client.connect(url="amqp://guest:guest@localhost:5672/%2F")
+    assert connect_calls == 1
 
 
-async def test_connect(client, monkeypatch):
-    monkeypatch.setattr(aioamqp, "connect", aioamqp_mock)
-    await client.connect()
-    channel = await client.get_channel()
-    assert channel is not None
+async def test_channel_raises_when_not_connected(client):
+    with pytest.raises(RuntimeError):
+        await client.channel()
 
 
-async def test_channel_not_initialized(client):
-    with pytest.raises(AttributeNotInitialized):
-        await client.get_channel()
+async def test_connect_builds_url_from_kwargs(client, monkeypatch):
+    received_kwargs = {}
 
+    async def mock_connect_robust(**kwargs):
+        nonlocal received_kwargs
+        received_kwargs = kwargs
+        return aio_pika.RobustConnection
 
-async def test_watch_connection_state_clears_event_after_recovery(
-    client_mock, subscribe_mock, monkeypatch
-):
-    async def _fast_configure(self, channel=None):
-        pass
+    monkeypatch.setattr(aio_pika, "connect_robust", mock_connect_robust)
 
-    monkeypatch.setattr(Subscribe, "configure", _fast_configure)
-
-    client_mock._event.set()
-    task = asyncio.create_task(client_mock.watch_connection_state(subscribe_mock))
-    await asyncio.sleep(0.1)
-    assert not client_mock._event.is_set()
-    task.cancel()
-
-
-async def test_watch_connection_state_clears_event_on_failure(
-    client_mock, subscribe_mock, monkeypatch
-):
-    async def raising_get_channel():
-        raise AttributeNotInitialized()
-
-    monkeypatch.setattr(client_mock, "get_channel", raising_get_channel)
-    client_mock._event.set()
-
-    task = asyncio.create_task(client_mock.watch_connection_state(subscribe_mock))
-    await asyncio.sleep(0.5)
-
-    assert not client_mock._event.is_set()
-    task.cancel()
-
-
-def test_client_repr(client):
-    assert (
-        repr(client)
-        == "AioRabbitClient(connected=False, channels=0, max_channels=0, background_tasks=BackgroundTasks(tasks=0, tasks_by_name=[]))"
+    await client.connect(
+        host="myhost", port=5673, login="user", password="pass", virtualhost="vh"
     )
+    assert received_kwargs["host"] == "myhost"
+    assert received_kwargs["port"] == 5673
+    assert received_kwargs["login"] == "user"
+    assert received_kwargs["password"] == "pass"
+    assert received_kwargs["virtualhost"] == "vh"
 
 
+async def test_close_when_not_connected(client):
+    await client.close()
+
+
+async def test_is_connected_returns_false_when_not_connected(client):
+    assert not client.is_connected
+
+
+async def test_async_context_manager(client, monkeypatch):
+    enter_called = False
+    exit_called = False
+
+    async def mock_connect_robust(**kwargs):
+        return aio_pika.RobustConnection
+
+    async def mock_close():
+        nonlocal exit_called
+        exit_called = True
+
+    monkeypatch.setattr(aio_pika, "connect_robust", mock_connect_robust)
+    monkeypatch.setattr(aio_pika.RobustConnection, "close", mock_close)
+
+    async with client:
+        enter_called = True
+        await client.connect()
+
+    assert enter_called
+    assert exit_called
+
+
+@pytest.mark.skip(reason="Legacy: server_properties removed in Phase 1")
 def test_server_properties_with_client_not_connected(client):
     assert client.server_properties is None
 
 
+@pytest.mark.skip(reason="Legacy: server_properties removed in Phase 1")
 def test_server_properties(client_mock):
     assert isinstance(client_mock.server_properties, dict)
 
 
+@pytest.mark.skip(reason="Legacy: persistent_connect removed in Phase 1")
 async def test_persistent_connect_backoff(client, monkeypatch):
-    connect_attempts = 0
-    sleep_delays = []
-
-    async def mock_connect(**kwargs):
-        nonlocal connect_attempts
-        connect_attempts += 1
-        raise OSError("connection refused")
-
-    _original_sleep = asyncio.sleep
-
-    async def mock_sleep(delay):
-        sleep_delays.append(delay)
-        await _original_sleep(0)
-
-    monkeypatch.setattr(aioamqp, "connect", mock_connect)
-    monkeypatch.setattr(asyncio, "sleep", mock_sleep)
-
-    task = asyncio.create_task(client.persistent_connect())
-
-    for _ in range(50):
-        if connect_attempts >= 5:
-            break
-        await _original_sleep(0.01)
-
-    task.cancel()
-    await _original_sleep(0)
-
-    assert connect_attempts >= 5
-    assert sleep_delays[0] == 1
-    assert sleep_delays[1] == 2
-    assert sleep_delays[2] == 4
+    pass
 
 
+@pytest.mark.skip(reason="Legacy: watch_connection_state removed in Phase 1")
+async def test_watch_connection_state_clears_event_after_recovery(
+    client_mock, subscribe_mock, monkeypatch
+):
+    pass
+
+
+@pytest.mark.skip(reason="Legacy: watch_connection_state removed in Phase 1")
+async def test_watch_connection_state_clears_event_on_failure(
+    client_mock, subscribe_mock, monkeypatch
+):
+    pass
+
+
+@pytest.mark.skip(reason="Legacy: watch_channel_state removed in Phase 1")
 async def test_watch_channel_state_recovers_closed_channel(
     client_mock, subscribe_mock, monkeypatch
 ):
-    configure_called = False
-    _original_sleep = asyncio.sleep
-
-    async def track_configure(self, channel=None):
-        nonlocal configure_called
-        configure_called = True
-
-    async def noop_sleep(delay):
-        await _original_sleep(0)
-
-    monkeypatch.setattr(asyncio, "sleep", noop_sleep)
-    monkeypatch.setattr(subscribe_mock.__class__, "configure", track_configure)
-
-    subscribe_mock._channel.is_open = False
-
-    task = asyncio.create_task(client_mock.watch_channel_state(subscribe_mock))
-    await _original_sleep(0.05)
-    task.cancel()
-    await _original_sleep(0)
-
-    assert configure_called
+    pass
 
 
-@pytest.mark.parametrize("attribute", ["transport", "server_properties", "protocol"])
+@pytest.mark.skip(reason="Legacy: persistent_connect removed in Phase 1")
+async def test_persistent_connect_closes_transport_on_cancellation(client, monkeypatch):
+    pass
+
+
+def test_client_repr(client):
+    assert "AioRabbitClient" in repr(client)
+
+
+@pytest.mark.parametrize("attribute", ["connect", "channel", "close", "is_connected"])
 def test_client_attributes(attribute):
     assert hasattr(AioRabbitClient, attribute)
-
-
-async def test_persistent_connect_closes_transport_on_cancellation(client, monkeypatch):
-    close_calls = []
-
-    class MockTransport:
-        def close(self):
-            close_calls.append(True)
-
-    transport = MockTransport()
-
-    async def mock_wait_closed(self):
-        await asyncio.Event().wait()
-
-    protocol = type("MockProtocol", (), {"wait_closed": mock_wait_closed})()
-
-    async def mock_connect(**kwargs):
-        return transport, protocol
-
-    monkeypatch.setattr(aioamqp, "connect", mock_connect)
-
-    task = asyncio.create_task(client.persistent_connect())
-    await asyncio.sleep(0.05)
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
-
-    assert len(close_calls) >= 1

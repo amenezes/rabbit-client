@@ -1,21 +1,14 @@
-import os
-from typing import Union
-
-from .logger import logger
+from rabbit.logger import logger
 
 
 def expo(
-    headers: Union[None, dict],
-    delay: Union[None, int] = None,
-    base: Union[None, int] = None,
-    factor: Union[None, int] = None,
-    max_delay: Union[None, int] = None,
+    headers: dict | None,
+    delay: int = 300000,
+    base: int = 2,
+    factor: int = 1,
+    max_delay: int | None = None,
 ) -> int:
     """Exponential delay strategy."""
-    delay = delay or int(os.getenv("EXPO_DELAY", 300000))
-    base = base or int(os.getenv("EXPO_BASE", 2))
-    factor = factor if factor is not None else int(os.getenv("EXPO_FACTOR", 1))
-    max_delay = max_delay or os.getenv("EXPO_MAX_DELAY")  # type: ignore
     if max_delay:
         max_delay = int(max_delay)
 
@@ -30,14 +23,11 @@ def expo(
 
 
 def fibo(
-    headers: Union[None, dict],
-    delay: Union[None, int] = None,
-    max_delay: Union[None, int] = None,
+    headers: dict | None,
+    delay: int = 300000,
+    max_delay: int = 86400000,
 ) -> int:
     """Incremental delay strategy."""
-    delay = delay or int(os.getenv("FIBO_DELAY", 300000))
-    max_delay = max_delay or int(os.getenv("FIBO_MAX_DELAY", 86400000))
-
     current_delay = _set_timeout(headers, delay)
     logger.debug(
         f"fibo delay strategy: [delay={delay}, current_delay={current_delay}, max_delay={max_delay}]"
@@ -47,14 +37,13 @@ def fibo(
     return int(max_delay)
 
 
-def constant(headers: Union[None, dict], delay: Union[None, int] = None) -> int:
+def constant(headers: dict | None, delay: int = 300000) -> int:
     """Constant delay strategy."""
-    delay = delay or int(os.getenv("CONSTANT_DELAY", 300000))
     logger.debug(f"constant delay strategy: [delay={delay}]")
     return delay
 
 
-def _set_timeout(headers: Union[None, dict], delay: int) -> int:
+def _set_timeout(headers: dict | None, delay: int) -> int:
     if (headers is not None) and ("x-delay" in headers):
         delay = headers["x-delay"]
     return int(delay)

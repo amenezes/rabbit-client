@@ -1,53 +1,46 @@
 import pytest
-from aioamqp.exceptions import ChannelClosed
 
-from rabbit import Publish
 from rabbit.exceptions import ClientNotConnectedError, ExchangeNotFound
+from rabbit.publish import Publish
 
 
-def test_register_publish_without_client_connected(publish):
+def test_publish_raises_when_not_connected(publish):
     with pytest.raises(ClientNotConnectedError):
         _ = publish.channel
 
 
-def test_publish_repr(publish_mock):
-    assert repr(publish_mock) == "Publish(channel_id=0, publisher_confirms=False)"
+async def test_send_event_publishes_message(publish_mock):
+    await publish_mock.send_event(b"test payload", "test-exchange", "test.key")
+
+    exchange = publish_mock._channel.exchanges.get("test-exchange")
+    assert exchange is not None
+    assert len(exchange.publish_calls) == 1
+    msg, routing_key = exchange.publish_calls[0]
+    assert msg.body == b"test payload"
+    assert routing_key == "test.key"
 
 
-async def test_publish_confirms_disabled(publish):
-    assert publish.publish_confirms is False
+async def test_send_event_uses_hardcoded_defaults(publish_mock):
+    await publish_mock.send_event(b"data")
+
+    exchange = publish_mock._channel.exchanges.get("default.in.exchange")
+    assert exchange is not None
+    _, routing_key = exchange.publish_calls[0]
+    assert routing_key == "#"
 
 
-async def test_publish_confirms_enabled():
-    publish = Publish(True)
-    assert publish.publish_confirms is True
+async def test_send_event_raises_exchange_not_found(publish_mock, monkeypatch):
+    import aio_pika
+
+    async def raise_not_found(*args, **kwargs):
+        raise aio_pika.exceptions.ChannelNotFoundEntity("no exchange")
+
+    monkeypatch.setattr(publish_mock._channel, "declare_exchange", raise_not_found)
+
+    with pytest.raises(ExchangeNotFound):
+        await publish_mock.send_event(b"test", "missing-exchange")
 
 
-async def test_send_event_channel_closed_propagates(publish_mock):
-    async def _raise(*args, **kwargs):
-        raise ChannelClosed("PRECONDITION_FAILED - channel closed")
-
-    publish_mock.channel.publish = _raise
-
-    with pytest.raises(ChannelClosed):
-        await publish_mock.send_event(b"test")
-
-
-async def test_send_event_exchange_not_found(publish_mock):
-    async def raise_no_exchange(*args, **kwargs):
-        raise ChannelClosed(404, "NOT_FOUND - no exchange 'test-exchange' in vhost '/'")
-
-    publish_mock.channel.publish = raise_no_exchange
-
-    with pytest.raises(ExchangeNotFound) as exc_info:
-        await publish_mock.send_event(b"test")
-
-    assert "default.in.exchange" in str(exc_info.value)
-    assert isinstance(exc_info.value.__cause__, ChannelClosed)
-
-
-@pytest.mark.parametrize(
-    "attribute", ["publish_confirms", "name", "channel_id", "channel"]
-)
+@pytest.mark.parametrize("attribute", ["channel"])
 def test_publish_attributes(attribute):
     assert hasattr(Publish, attribute)

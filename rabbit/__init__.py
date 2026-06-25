@@ -1,17 +1,15 @@
-from ._wait import constant, expo, fibo
-from .background_tasks import BackgroundTasks
-from .client import AioRabbitClient
-from .dlx import DLX
-from .exchange import Exchange
-from .publish import Publish
-from .queue import Queue
-from .subscribe import Subscribe
+from rabbit._wait import constant, expo, fibo
+from rabbit.client import AioRabbitClient
+from rabbit.dlx import DLX
+from rabbit.exchange import Exchange
+from rabbit.publish import Publish
+from rabbit.queue import Queue
+from rabbit.subscribe import Subscribe
 
-__version__ = "3.5.2"
+__version__ = "4.0.0"
 __all__ = [
     "__version__",
     "AioRabbitClient",
-    "BackgroundTasks",
     "DLX",
     "Exchange",
     "Queue",

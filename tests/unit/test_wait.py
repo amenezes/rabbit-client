@@ -24,16 +24,15 @@ def test_constant_wait(delay, expected):
     assert constant({"x-delay": delay}, delay) == expected
 
 
-def test_constant_delay_uses_env_var_when_no_delay_arg(monkeypatch):
-    monkeypatch.setenv("CONSTANT_DELAY", "3000")
-    assert constant(None) == 3000
+def test_constant_uses_default_when_no_delay_arg():
+    assert constant(None) == 300000
 
 
-def test_constant_delay_updates_when_env_var_changes(monkeypatch):
+def test_constant_ignores_env_vars(monkeypatch):
     monkeypatch.setenv("CONSTANT_DELAY", "3000")
-    constant(None)
+    assert constant(None) == 300000
     monkeypatch.setenv("CONSTANT_DELAY", "1000")
-    assert constant(None) == 1000
+    assert constant(None) == 300000
 
 
 @pytest.mark.parametrize(

@@ -6,16 +6,15 @@
 
 # rabbit-client
 
-asyncio rabbit client powered by [aioamqp](https://github.com/Polyconseil/aioamqp).
+asyncio rabbit client powered by [aio-pika](https://github.com/mosquito/aio-pika).
 
 rabbit-client provides a simple and automatic configuration to work with:  
 
   - pub/sub and [Dead Letter Exchanges](https://www.rabbitmq.com/dlx.html) with [rabbitmq](https://www.rabbitmq.com);  
   - [polling publisher pattern](https://microservices.io/patterns/data/polling-publisher.html) `out-of-box`;
-  - connection and reconnection management with broker;
+  - connection and reconnection management with broker (powered by `connect_robust`);
   - automatic channel configuration;
   - concurrent task execution `[optional]`;
-  - [publisher confirms](https://www.rabbitmq.com/confirms.html#publisher-confirms) `[optional]`;
   - automatic qos configuration;
   - different strategies to delay error events.
 
