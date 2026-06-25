@@ -1,24 +1,45 @@
 name: ci
 
-on: [ push, pull_request ]
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
 
 jobs:
-  tests:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
-        python-version: ['3.11', '3.12', '3.13', '3.14']
-        os: [ubuntu]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}-latest
-    timeout-minutes: 15
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    services:
+      rabbitmq:
+        image: rabbitmq:management-alpine
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics check_port_connectivity"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 5
+
     steps:
-    - uses: actions/checkout@v4
-    - uses: astral-sh/setup-uv@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-        enable-cache: true
-        cache-dependency-glob: "pyproject.toml"
-    - name: Install dependencies
-      run: uv sync --dev --all-extras
-    - name: Run lint & tests
-      run: make ci
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --dev --all-extras
+
+      - name: Lint
+        run: make lint
+
+      - name: Tests
+        run: make tests
