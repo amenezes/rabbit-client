@@ -1,16 +1,19 @@
-import asyncio
-from typing import Callable
+from typing import Any, Callable
 
-from aioamqp.channel import Channel
-from aioamqp.envelope import Envelope
-from aioamqp.properties import Properties
+import aio_pika
+from aio_pika import ExchangeType
+from aio_pika.abc import (
+    AbstractChannel,
+    AbstractExchange,
+    AbstractIncomingMessage,
+    AbstractQueue,
+)
 from attrs import field, mutable, validators
 
-from ._wait import constant
-from .exceptions import AttributeNotInitialized, OperationError
-from .exchange import Exchange
-from .logger import logger
-from .queue import Queue
+from rabbit._wait import constant
+from rabbit.exchange import Exchange
+from rabbit.logger import logger
+from rabbit.queue import Queue
 
 
 @mutable
@@ -27,102 +30,79 @@ class DLX:
     delay_strategy: Callable[..., int] = field(
         default=constant, validator=validators.is_callable()
     )
-    _channel = field(init=False, repr=False)
+    _channel: AbstractChannel | None = field(default=None, init=False, repr=False)
+    _dlx_exchange: AbstractExchange | None = field(default=None, init=False, repr=False)
 
     def __repr__(self) -> str:
-        return f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
+        return (
+            f"DLX(queue={self.queue}, delay_strategy={self.delay_strategy.__name__}, "
+            f"exchange={self.exchange}), dlq_exchange={self.dlq_exchange}"
+        )
 
-    @property
-    def channel(self) -> Channel:
-        return self._channel
-
-    @channel.setter
-    def channel(self, channel: Channel) -> None:
+    async def configure(
+        self,
+        channel: AbstractChannel,
+        main_queue: AbstractQueue,
+    ) -> None:
         self._channel = channel
 
-    async def configure(self) -> None:
-        """Configure DLX channel, queues and exchange."""
-        # Sequential on same AMQP channel — see bug-rabbit-client_8.md.
-        try:
-            await self._configure_queue()
-            await self._configure_exchange()
-            await self._configure_queue_bind()
-        except AttributeNotInitialized:
-            logger.debug("Waiting client initialization...DLX")
-
-    async def _configure_exchange(self) -> None:
-        await self._channel.exchange_declare(
-            exchange_name=self.exchange.name,
-            type_name=self.exchange.exchange_type,
+        self._dlx_exchange = await channel.declare_exchange(
+            self.exchange.name,
+            ExchangeType(self.exchange.exchange_type),
             durable=self.exchange.durable,
         )
-        await self._channel.exchange_declare(
-            exchange_name=self.dlq_exchange.name,
-            type_name=self.dlq_exchange.exchange_type,
+
+        dlq_router = await channel.declare_exchange(
+            self.dlq_exchange.name,
+            ExchangeType(self.dlq_exchange.exchange_type),
             durable=self.dlq_exchange.durable,
         )
-        await asyncio.sleep(1.5)
 
-    async def _configure_queue(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.queue.name)
-        await self._channel.queue_declare(
-            queue_name=queue_name,
+        retry_queue_name = await self._ensure_endswith_dlq(self.queue.name)
+        retry_queue = await channel.declare_queue(
+            retry_queue_name,
             durable=self.queue.durable,
-            arguments=self.queue.arguments,
+            arguments={
+                "x-dead-letter-exchange": self.dlq_exchange.name,
+                "x-dead-letter-routing-key": self.queue.name,
+            },
         )
 
-    async def _configure_queue_bind(self) -> None:
-        queue_name = await self._ensure_endswith_dlq(self.queue.name)
-        await self._channel.queue_bind(
-            exchange_name=self.exchange.name,
-            queue_name=queue_name,
-            routing_key=self.queue.name,
+        await retry_queue.bind(self._dlx_exchange, routing_key=self.queue.name)
+        await main_queue.bind(dlq_router, routing_key=self.queue.name)
+
+    async def send_event(
+        self, cause: Exception, message: AbstractIncomingMessage
+    ) -> None:
+        if self._dlx_exchange is None:
+            raise RuntimeError("DLX not configured. Call configure() first.")
+
+        delay = self.delay_strategy(message.headers)
+
+        headers: dict[str, Any] = {
+            "x-delay": str(delay),
+            "x-exception-message": str(cause),
+            "x-original-exchange": message.exchange or "",
+            "x-original-routingKey": message.routing_key or "",
+        }
+        if message.headers:
+            headers.update(message.headers)
+
+        logger.debug(
+            f"Send event to dlq: [exchange: {self.exchange.name}"
+            f" | routing_key: {self.queue.name} | delay: {delay}]"
         )
-        await self._channel.queue_bind(
-            exchange_name=self.dlq_exchange.name,
-            queue_name=self.queue.name,
-            routing_key=self.dlq_exchange.topic,
+
+        await self._dlx_exchange.publish(
+            aio_pika.Message(
+                body=message.body,
+                expiration=int(delay),
+                headers=headers,
+            ),
+            routing_key=self.queue.name,
         )
 
     async def _ensure_endswith_dlq(self, value: str) -> str:
         if not value.endswith(".dlq"):
             value = f"{value}.dlq"
         return value
-
-    async def send_event(
-        self, cause: Exception, body: bytes, envelope: Envelope, properties: Properties
-    ) -> None:
-        """Sent event message to DLX/DLQ."""
-        timeout = self.delay_strategy(properties.headers)
-        properties = await self._get_properties(timeout, cause, envelope, properties)
-
-        logger.debug(
-            f"Send event to dlq: [exchange: {self.exchange.name}"
-            f" | routing_key: {self.queue.name} | properties: {properties}]"
-        )
-        try:
-            await self._channel.publish(
-                body, self.exchange.name, self.queue.name, properties
-            )
-        except AttributeError:
-            raise OperationError("Ensure that instance was connected ")
-
-    async def _get_properties(
-        self,
-        timeout: int,
-        exception_message: Exception,
-        envelope: Envelope,
-        properties: Properties,
-    ) -> dict:
-        custom_properties: dict = {
-            "expiration": f"{timeout}",
-            "headers": {
-                "x-delay": f"{timeout}",
-                "x-exception-message": f"{exception_message}",
-                "x-original-exchange": f"{envelope.exchange_name}",
-                "x-original-routingKey": f"{envelope.routing_key}",
-            },
-        }
-        if properties.headers is not None:
-            custom_properties["headers"].update(properties.headers)
-        return custom_properties

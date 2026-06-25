@@ -33,7 +33,7 @@ def cli():
 )
 @click.option(
     "--port",
-    default="5672",
+    default=5672,
     show_default=True,
     help="RabbitMQ port.",
 )
@@ -47,7 +47,7 @@ def cli():
     "--password",
     default="guest",
     show_default=True,
-    help="RabbitMQ username.",
+    help="RabbitMQ password.",
 )
 @click.option(
     "-c",
@@ -60,7 +60,6 @@ def cli():
     "-x",
     "--exchange",
     default="default.in.exchange",
-    envvar="SUBSCRIBE_EXCHANGE_NAME",
     show_default=True,
     help="Exchange name.",
 )
@@ -68,7 +67,6 @@ def cli():
     "-t",
     "--type",
     default="topic",
-    envvar="SUBSCRIBE_EXCHANGE_TYPE",
     show_default=True,
     help="Exchange topic type name.",
 )
@@ -76,7 +74,6 @@ def cli():
     "-k",
     "--key",
     default="#",
-    envvar="SUBSCRIBE_TOPIC",
     show_default=True,
     help="Exchange topic key.",
 )
@@ -84,7 +81,6 @@ def cli():
     "-q",
     "--queue",
     default="default.subscribe.queue",
-    envvar="SUBSCRIBE_QUEUE_NAME",
     show_default=True,
     help="Queue name.",
 )
@@ -170,7 +166,6 @@ def consumer(
 @click.option(
     "-x",
     "--exchange",
-    envvar="PUBLISH_EXCHANGE_NAME",
     default="default.in.exchange",
     show_default=True,
     help="Exchange name.",
@@ -178,7 +173,6 @@ def consumer(
 @click.option(
     "-k",
     "--key",
-    envvar="PUBLISH_ROUTING_KEY",
     default="#",
     show_default=True,
     help="Exchange topic key.",
@@ -196,8 +190,6 @@ def consumer(
     show_default=True,
     help="Enable rabbit ssl connection.",
 )
-@click.option("--verify", is_flag=True, default=False, help="Verify ssl certificate?")
-@click.option("--channels", default=1, show_default=True, help="Channel max.")
 @click.option("-v", "--verbose", is_flag=True, help="Extend output info.")
 def send_event(
     payload: Path,
@@ -209,8 +201,6 @@ def send_event(
     login: str,
     password: str,
     ssl: bool,
-    verify: bool,
-    channels: int,
     verbose: bool,
 ) -> None:
     """Send a sample message 📤 to Consumer or PollingPublisher"""
@@ -244,8 +234,6 @@ def send_event(
             login=login,
             password=password,
             ssl=ssl,
-            verify_ssl=verify,
-            channel_max=channels,
         )
         if payload.is_file():
             publish.send_event(payload.read_bytes(), events, payload.name)

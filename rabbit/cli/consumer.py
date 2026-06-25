@@ -21,40 +21,34 @@ class Consumer:
         queue_name: str,
         concurrent: int,
     ) -> None:
-        self.subscribe_client = AioRabbitClient()
-
-        self._loop = self.event_loop()  # type: ignore
-        self._loop.create_task(
-            self.subscribe_client.persistent_connect(
-                host=host, port=port, login=login, password=password
-            ),
-            name="rabbit-client-cli-connection",
-        )
-
+        self.host = host
+        self.port = port
+        self.login = login
+        self.password = password
+        self.exchange_name = exchange_name
         self.exchange_type = exchange_type
         self.exchange_topic = exchange_topic
-        self.exchange_name = exchange_name
         self.queue_name = queue_name
         self.concurrent = concurrent
 
-    def event_loop(self):
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        return loop
-
     def run(self, chaos_mode: bool = False, verbose: bool = True) -> None:
-        task = async_echo_job
-        if chaos_mode:
-            task = async_chaos_job
+        task = async_echo_job if not chaos_mode else async_chaos_job
+        try:
+            asyncio.run(self._run(task, verbose))
+        except KeyboardInterrupt:
+            pass
 
-        self._loop.run_until_complete(self.init(task, verbose))
-        self._loop.run_forever()
-
-    async def init(self, task, verbose: bool = False) -> None:
+    async def _run(self, task, verbose: bool = False) -> None:
         logger.info(f"Using '{task.__doc__}'")
+        client = AioRabbitClient()
+        await client.connect(
+            host=self.host,
+            port=self.port,
+            login=self.login,
+            password=self.password,
+        )
+        channel = await client.channel()
+
         subscribe = Subscribe(
             task=task,
             exchange=Exchange(
@@ -63,8 +57,16 @@ class Consumer:
             queue=Queue(name=self.queue_name),
             concurrent=self.concurrent,
         )
-        await self.subscribe_client.register(subscribe)
+        await subscribe.configure(channel)
+
         if verbose:
-            while True:
-                await asyncio.sleep(10)
-                logger.debug(repr(self.subscribe_client))
+            logger.info(
+                "Consumer ready — waiting for messages on " f"queue '{self.queue_name}'"
+            )
+
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            pass
+        finally:
+            await client.close()

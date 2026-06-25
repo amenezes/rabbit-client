@@ -27,10 +27,10 @@ classifiers = [
     "Topic :: Software Development :: Object Brokering",
     "Topic :: System :: Distributed Computing",
 ]
-keywords = ["asyncio", "aioamqp", "amqp", "rabbitmq"]
-requires-python = ">=3.8"
+keywords = ["asyncio", "aio-pika", "amqp", "rabbitmq"]
+requires-python = ">=3.11"
 dependencies = [
-    "aioamqp>=0.15.0",
+    "aio-pika>=9.4.0",
     "attrs>=19.1.0",
 ]
 
@@ -86,6 +86,9 @@ exclude = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: integration tests that require a running RabbitMQ broker",
+]
 
 [tool.mypy]
 files = ["rabbit"]

@@ -3,7 +3,7 @@
 ## Installing dependencies
 
 ```bash
-pip install 'rabbit-client[cli]'
+uv pip install 'rabbit-client[cli]'
 ```
 
 ## Usage
@@ -38,14 +38,18 @@ Usage: python -m rabbit consumer [OPTIONS]
   Start a consumer sample application 📩
 
 Options:
-  -c, --concurrent INTEGER  How many concurrent events to process.  [default:
-                            1]
+  --host TEXT               RabbitMQ hostname.  [default: localhost]
+  --port INTEGER            RabbitMQ port.  [default: 5672]
+  --login TEXT              RabbitMQ username.  [default: guest]
+  --password TEXT           RabbitMQ password.  [default: guest]
+  -c, --concurrent INTEGER  How many concurrent events to process.  [default: 1]
   -x, --exchange TEXT       Exchange name.  [default: default.in.exchange]
   -t, --type TEXT           Exchange topic type name.  [default: topic]
   -k, --key TEXT            Exchange topic key.  [default: #]
   -q, --queue TEXT          Queue name.  [default: default.subscribe.queue]
   --chaos                   Enable chaos mode. Raise random Exception to test
                             DLX mechanism.
+  -v, --verbose             Extend output info.
   -h, --help                Show this message and exit.
 ```
 
@@ -57,13 +61,13 @@ python -m rabbit consumer --chaos
 
 ### producer/send-event
 
-Send events to message broker.
+Send events to the message broker.
 
 ```bash
 python -m rabbit send-event data.json
 ```
 
-> `PAYLOAD` argument can be some `file` or `directory` with a list of json files.
+> `PAYLOAD` argument can be a `file` or `directory` with a list of json files.
 
 ```bash
 # expected output
@@ -80,8 +84,9 @@ Options:
   --login TEXT          RabbitMQ login.  [default: guest]
   --password TEXT       RabbitMQ password.  [default: guest]
   --ssl                 Enable rabbit ssl connection.
-  --verify              Verify ssl certificate?
-  --channels INTEGER    Channel max.  [default: 1]
   -v, --verbose         Extend output info.
   -h, --help            Show this message and exit.
 ```
+
+!!! warning "Removed in v4.0.0"
+    The `--verify` and `--channels` options available in v3.x have been removed. SSL certificate verification and channel multiplexing are now handled by `aio-pika` / `connect_robust` natively.

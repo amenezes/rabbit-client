@@ -16,30 +16,36 @@ import asyncio
 import logging
 
 from rabbit import AioRabbitClient, Publish
-from rabbit.exchange import Exchange
 
 
 logging.getLogger().setLevel(logging.DEBUG)
-
-   
-client = AioRabbitClient()
-asyncio.create_task(client.persistent_connect())
-
-publish = Publish()
-await client.register(publish)
 
 
 class MyRepo:
     def __init__(self, publish, db):
         self._publish = publish
         self._db = db
-    
-    async def start_polling():
+
+    async def start_polling(self):
         while True:
             await asyncio.sleep(10)
             # do some work here and retrieve database event data.
+            event = b'{"key": "value"}'
             await self._publish.send_event(event)
 
-repo = MyRepo(publish, DB())
-asyncio.create_task(repo.start_polling())
+
+async def main():
+    client = AioRabbitClient()
+    await client.connect(host="localhost", port=5672)
+    channel = await client.channel()
+
+    publish = Publish()
+    publish.channel = channel
+
+    repo = MyRepo(publish, None)  # pass your database connection here
+    asyncio.create_task(repo.start_polling())
+    await asyncio.Event().wait()
+
+
+asyncio.run(main())
 ```

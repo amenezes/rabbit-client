@@ -1,10 +1,8 @@
-import asyncio
+from contextlib import asynccontextmanager
+from typing import Any, Callable
 
 import pytest
-from aioamqp.envelope import Envelope
-from aioamqp.properties import Properties
 
-from rabbit.background_tasks import BackgroundTasks
 from rabbit.client import AioRabbitClient
 from rabbit.dlx import DLX
 from rabbit.exchange import Exchange
@@ -14,156 +12,120 @@ from rabbit.queue import Queue
 from rabbit.subscribe import Subscribe
 
 
+class MockExchange:
+    def __init__(self, name: str = "mock-exchange", exchange_type: str = "direct"):
+        self.name = name
+        self.exchange_type = exchange_type
+        self.publish_calls: list[tuple[Any, str]] = []
+
+    async def publish(self, message: Any, routing_key: str = "") -> None:
+        self.publish_calls.append((message, routing_key))
+
+    async def bind(self, exchange: "MockExchange", routing_key: str = "") -> None:
+        pass
+
+
+class MockQueue:
+    def __init__(self, name: str = "mock-queue"):
+        self.name = name
+        self.consume_callback: Callable | None = None
+        self.bind_calls: list[tuple[Any, str]] = []
+
+    async def bind(self, exchange: Any, routing_key: str = "") -> None:
+        self.bind_calls.append((exchange, routing_key))
+
+    async def consume(self, callback: Callable) -> None:
+        self.consume_callback = callback
+
+
+class MockChannel:
+    def __init__(self):
+        self.is_closed = False
+        self.publisher_confirms = False
+        self.qos_prefetch: int | None = None
+        self.exchanges: dict[str, MockExchange] = {}
+        self.queues: dict[str, MockQueue] = {}
+
+    async def set_qos(self, prefetch_count: int = 0, prefetch_size: int = 0) -> None:
+        self.qos_prefetch = prefetch_count
+
+    async def declare_exchange(
+        self,
+        name: str,
+        exchange_type: Any = None,
+        durable: bool = True,
+        passive: bool = False,
+    ) -> MockExchange:
+        if name not in self.exchanges:
+            self.exchanges[name] = MockExchange(name)
+        return self.exchanges[name]
+
+    async def declare_queue(
+        self,
+        name: str,
+        durable: bool = True,
+        arguments: dict | None = None,
+        passive: bool = False,
+    ) -> MockQueue:
+        if name not in self.queues:
+            self.queues[name] = MockQueue(name)
+        return self.queues[name]
+
+    async def close(self) -> None:
+        self.is_closed = True
+
+
+class MockMessage:
+    def __init__(
+        self,
+        body: bytes = b"",
+        headers: dict | None = None,
+        exchange: str = "",
+        routing_key: str = "",
+        delivery_tag: int = 1,
+    ):
+        self.body = body
+        self.headers = headers or {}
+        self.exchange = exchange
+        self.routing_key = routing_key
+        self.delivery_tag = delivery_tag
+        self.acked = False
+        self.nacked = False
+        self.rejected = False
+
+    async def ack(self) -> None:
+        self.acked = True
+
+    async def nack(self, requeue: bool = True) -> None:
+        self.nacked = True
+
+    async def reject(self, requeue: bool = False) -> None:
+        self.rejected = True
+
+    @asynccontextmanager
+    async def process(
+        self,
+        requeue: bool = False,
+        reject_on_redelivered: bool = False,
+        ignore_processed: bool = False,
+    ):
+        try:
+            yield self
+        except Exception:
+            if not ignore_processed and not self.acked:
+                await self.reject(requeue=requeue)
+            raise
+
+
 class AioRabbitClientMock(AioRabbitClient):
     def __init__(self, *args, **kwargs):
-        self._protocol = ProtocolMock()
-        self.transport = TransportMock()
-        self._app = kwargs.get("app")
-        self._background_tasks = BackgroundTasks()
-        self._event = asyncio.Event()
-        self._items = list()
-
-    @property
-    def protocol(self):
-        return self._protocol
-
-    @protocol.setter
-    def protocol(self, value):
-        pass
-
-    async def get_channel(self):
-        return ChannelMock()
-
-
-class ChannelMock:
-    def __init__(self):
-        self.channel = "channel"
-        self.publisher_confirms = False
-
-    async def queue_declare(self, *args, **kwargs):
-        pass
-
-    async def exchange_declare(self, *args, **kwargs):
-        pass
-
-    async def queue_bind(self, *args, **kwargs):
-        pass
-
-    async def publish(self, *args, **kwargs):
-        pass
-
-    async def basic_consume(self, *args, **kwargs):
-        pass
-
-    async def basic_client_ack(self, *args, **kwargs):
-        pass
-
-    async def basic_client_nack(self, *args, **kwargs):
-        pass
-
-    async def basic_qos(self, *args, **kwargs):
-        pass
-
-    async def basic_reject(self, *args, **kwargs):
-        pass
-
-    async def confirm_select(self, *args, **kwargs):
-        self.publisher_confirms = True
-
-
-class RecordingChannelMock:
-    # Detects overlapping in-flight RPCs: AMQP channels are single-threaded, so
-    # concurrent RPCs (asyncio.gather) corrupt broker state. See bug-rabbit-client_8.md.
-    def __init__(self):
-        self.calls = []
-        self.overlaps = 0
-        self._in_flight = 0
-
-    async def _rpc(self, name, key):
-        self._in_flight += 1
-        if self._in_flight > 1:
-            self.overlaps += 1
-        self.calls.append((name, key))
-        await asyncio.sleep(0)
-        self._in_flight -= 1
-
-    async def basic_qos(self, **kwargs):
-        await self._rpc("basic_qos", kwargs.get("prefetch_count"))
-
-    async def queue_declare(self, **kwargs):
-        await self._rpc("queue_declare", kwargs.get("queue_name"))
-
-    async def exchange_declare(self, **kwargs):
-        await self._rpc("exchange_declare", kwargs.get("exchange_name"))
-
-    async def queue_bind(self, **kwargs):
-        await self._rpc(
-            "queue_bind",
-            (kwargs.get("exchange_name"), kwargs.get("queue_name")),
-        )
-
-    async def basic_consume(self, **kwargs):
-        await self._rpc("basic_consume", kwargs.get("queue_name"))
-
-
-class TransportMock:
-    def __init__(self):
-        self.transport = "transport"
-
-    def close(self):
-        pass
-
-
-class ProtocolMock:
-    def __init__(self):
-        self.protocol = "protocol"
-        self.server_properties = {}
-
-    async def channel(self):
-        return SubscribeMock()
-
-    async def wait_closed(self):
-        pass
-
-
-class AioAmqpMock:
-    def __init__(self, *args, **kwargs):
-        self.protocol = ProtocolMock()
-        self.transport = TransportMock()
-        self.channel = ChannelMock()
+        super().__init__()
 
     async def connect(self, *args, **kwargs):
-        return self.transport, self.protocol
-
-
-class SubscribeMock:
-    def __init__(self, *args, **kwargs):
         pass
 
-    async def configure(self, *args, **kwargs):
-        pass
-
-
-class PropertiesMock(Properties):
-    def __init__(self, headers={"x-delay": 5000}):
-        self.headers = headers
-
-
-class EnvelopeMock(Envelope):
-    def __init__(self):
-        pass
-
-    @property
-    def exchange_name(self):
-        return "src-exchange"
-
-    @property
-    def routing_key(self):
-        return "#"
-
-    @property
-    def delivery_tag(self):
-        return True
+    async def channel(self):
+        return MockChannel()
 
 
 @pytest.fixture
@@ -182,8 +144,8 @@ async def subscribe():
 
 
 @pytest.fixture
-async def subscribe_mock(subscribe, client_mock):
-    await client_mock.register(subscribe)
+async def subscribe_mock(subscribe):
+    subscribe.channel = MockChannel()
     return subscribe
 
 
@@ -193,8 +155,8 @@ async def publish():
 
 
 @pytest.fixture
-async def publish_mock(publish, client_mock):
-    await client_mock.register(publish)
+async def publish_mock(publish):
+    publish.channel = MockChannel()
     return publish
 
 
@@ -239,24 +201,10 @@ def exchange():
 
 
 @pytest.fixture
-def envelope_mock():
-    return EnvelopeMock()
+def mock_message():
+    return MockMessage(body=b'{"key": "value"}', headers={"x-delay": 5000})
 
 
 @pytest.fixture
-def recording_channel():
-    return RecordingChannelMock()
-
-
-@pytest.fixture
-def skip_configure_delays(monkeypatch):
-    # sleep(0) MUST stay a real yield — it exposes asyncio.gather interleaving.
-    # Only the >0 guard sleeps (1.5s) are skipped for speed.
-    real_sleep = asyncio.sleep
-
-    async def fast_sleep(delay, *args, **kwargs):
-        if delay and delay > 0:
-            return
-        await real_sleep(0)
-
-    monkeypatch.setattr(asyncio, "sleep", fast_sleep)
+def mock_channel():
+    return MockChannel()

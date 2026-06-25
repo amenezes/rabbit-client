@@ -1,18 +1,20 @@
-import asyncio
-import os
-from typing import Callable, Union
+from typing import Callable
 
-from aioamqp.channel import Channel
-from aioamqp.envelope import Envelope
-from aioamqp.properties import Properties
+from aio_pika import ExchangeType
+from aio_pika.abc import (
+    AbstractChannel,
+    AbstractExchange,
+    AbstractIncomingMessage,
+    AbstractQueue,
+)
 from attrs import field, mutable, validators
 
-from ._wait import constant
-from .dlx import DLX
-from .exceptions import ClientNotConnectedError
-from .exchange import Exchange
-from .logger import logger
-from .queue import Queue
+from rabbit._wait import constant
+from rabbit.dlx import DLX
+from rabbit.exceptions import ClientNotConnectedError
+from rabbit.exchange import Exchange
+from rabbit.logger import logger
+from rabbit.queue import Queue
 
 
 @mutable(repr=False)
@@ -20,16 +22,14 @@ class Subscribe:
     task: Callable = field(validator=validators.is_callable())
     exchange: Exchange = field(
         default=Exchange(
-            name=os.getenv("SUBSCRIBE_EXCHANGE_NAME", "default.in.exchange"),
-            exchange_type=os.getenv("SUBSCRIBE_EXCHANGE_TYPE", "topic"),
-            topic=os.getenv("SUBSCRIBE_TOPIC", "#"),
+            name="default.in.exchange",
+            exchange_type="topic",
+            topic="#",
         ),
         validator=validators.instance_of(Exchange),
     )
     queue: Queue = field(
-        default=Queue(
-            name=os.getenv("SUBSCRIBE_QUEUE_NAME", "default.subscribe.queue")
-        ),
+        default=Queue(name="default.subscribe.queue"),
         validator=validators.instance_of(Queue),
     )
     concurrent: int = field(default=1, validator=validators.instance_of(int))
@@ -37,25 +37,26 @@ class Subscribe:
         default=constant, validator=validators.is_callable()
     )
     _dlx: DLX = field(validator=validators.instance_of(DLX), init=False)
-    _job_queue = field(init=False)
-    _loop = field(init=False)
-    _channel: Channel = field(init=False)
+    _channel: AbstractChannel | None = field(default=None, init=False)
+    _main_exchange: AbstractExchange | None = field(default=None, init=False)
+    _main_queue: AbstractQueue | None = field(default=None, init=False)
 
     def __repr__(self) -> str:
-        return f"Subscribe(task={self.task.__name__}, exchange={self.exchange}, queue={self.queue}, concurrent={self.concurrent}, dlx={self._dlx})"
+        return (
+            f"Subscribe(task={self.task.__name__}, exchange={self.exchange}, "
+            f"queue={self.queue}, concurrent={self.concurrent})"
+        )
 
     def __attrs_post_init__(self) -> None:
         self._dlx = DLX(
             exchange=Exchange(
-                name=os.getenv("DLX_EXCHANGE_NAME", "DLX"),
-                exchange_type=os.getenv("DLX_TYPE", "direct"),
+                name="DLX",
+                exchange_type="direct",
             ),
             dlq_exchange=Exchange(
-                name=os.getenv(
-                    "DLQ_EXCHANGE_NAME", f"dlqReRouter.{self.exchange.name}"
-                ),
-                exchange_type=os.getenv("DLQ_EXCHANGE_TYPE", "topic"),
-                topic=os.getenv("SUBSCRIBE_QUEUE", self.queue.name),
+                name=f"dlqReRouter.{self.exchange.name}",
+                exchange_type="topic",
+                topic=self.queue.name,
             ),
             queue=Queue(
                 name=self.queue.name,
@@ -66,139 +67,59 @@ class Subscribe:
             ),
             delay_strategy=self.delay_strategy,
         )
-        self._job_queue = asyncio.Queue(maxsize=self.concurrent)
-        self._loop = asyncio.get_running_loop()
 
     @property
     def name(self) -> str:
         return "Subscribe"
 
     @property
-    def channel(self) -> Channel:
-        try:
-            return self._channel
-        except AttributeError:
+    def channel(self) -> AbstractChannel:
+        if self._channel is None:
             raise ClientNotConnectedError
+        return self._channel
 
     @channel.setter
-    def channel(self, channel: Channel) -> None:
-        self._dlx.channel = channel
+    def channel(self, channel: AbstractChannel) -> None:
         self._channel = channel
 
-    async def configure(self, channel: Union[None, Channel] = None) -> None:
-        """Configure subscriber channel, queues and exchange."""
-        # Sequential by requirement: AMQP 0-9-1 channels are single-threaded RPC
-        # queues and aioamqp does not serialize concurrent calls; asyncio.gather
-        # would interleave frames and leave messages permanently Unacked (bug-rabbit-client_8).
-        await self.qos(prefetch_count=self.concurrent)
-        await self._configure_queue()
-        await self._dlx.configure()
-        await self._configure_exchange()
-        await self._configure_queue_bind()
+    async def configure(self, channel: AbstractChannel | None = None) -> None:
+        if channel is not None:
+            self.channel = channel
 
-    async def _configure_exchange(self) -> None:
-        await self.channel.exchange_declare(
-            exchange_name=self.exchange.name,
-            type_name=self.exchange.exchange_type,
+        ch = self.channel
+
+        await ch.set_qos(prefetch_count=self.concurrent)
+
+        self._main_exchange = await ch.declare_exchange(
+            self.exchange.name,
+            ExchangeType(self.exchange.exchange_type),
             durable=self.exchange.durable,
         )
-        await asyncio.sleep(1.5)
-
-    async def _configure_queue(self) -> None:
-        await self.channel.queue_declare(
-            queue_name=self.queue.name, durable=self.queue.durable
+        self._main_queue = await ch.declare_queue(
+            self.queue.name,
+            durable=self.queue.durable,
         )
-
-    async def _configure_queue_bind(self) -> None:
-        await self.channel.queue_bind(
-            exchange_name=self.exchange.name,
-            queue_name=self.queue.name,
-            routing_key=self.exchange.topic,
+        await self._main_queue.bind(
+            self._main_exchange, routing_key=self.exchange.topic
         )
-        await self.channel.basic_consume(
-            callback=self.callback, queue_name=self.queue.name
-        )
+        await self._dlx.configure(ch, self._main_queue)
 
-    async def callback(
-        self, channel: Channel, body: bytes, envelope: Envelope, properties: Properties
-    ) -> None:
-        if not self._job_queue.full():
-            self._job_queue.put_nowait((body, envelope, properties))
-            self._loop.create_task(self._run(), name="subscribe-task")
-        else:
-            await self.nack_event(envelope, requeue=True)
-            await self._job_queue.join()
+        await self._main_queue.consume(self._handle_message)
 
-    async def _run(self) -> None:
-        try:
-            body, envelope, properties = await self._job_queue.get()
-        except Exception:
-            logger.error("Failed to get item from job queue", exc_info=True)
-            return
-
-        try:
-            await self.task(body, envelope, properties)
-            self._job_queue.task_done()
-            await self.ack_event(envelope, multiple=False)
-        except Exception as cause:
-            self._job_queue.task_done()
-            shielded = asyncio.shield(
-                asyncio.gather(
-                    self.ack_event(envelope, multiple=False),
-                    self._dlx.send_event(cause, body, envelope, properties),
-                    return_exceptions=True,
-                )
-            )
+    async def _handle_message(self, message: AbstractIncomingMessage) -> None:
+        async with message.process(
+            requeue=False,
+            ignore_processed=True,
+        ):
             try:
-                await asyncio.wait_for(shielded, timeout=5.0)
-            except asyncio.TimeoutError:
+                await self.task(message)
+                await message.ack()
+            except Exception as cause:
                 logger.warning(
-                    "DLQ send timed out after 5s — "
-                    "message will be redelivered by broker"
-                )
-            except asyncio.CancelledError:
-                logger.warning(
-                    "Shutdown detected — draining pending ACK/DLQ (max 2s)..."
+                    f"Task failed for message (delivery_tag={message.delivery_tag}): {cause}"
                 )
                 try:
-                    if not shielded.done():
-                        await asyncio.wait_for(shielded, timeout=2.0)
-                except (asyncio.TimeoutError, asyncio.CancelledError):
-                    logger.warning(
-                        "ACK/DLQ still pending after shutdown — "
-                        "message will be redelivered by broker"
-                    )
-                raise
-
-    async def ack_event(self, envelope: Envelope, multiple: bool = False) -> None:
-        """Sends ack message to broker."""
-        await self.channel.basic_client_ack(
-            delivery_tag=envelope.delivery_tag, multiple=multiple
-        )
-
-    async def nack_event(
-        self, envelope: Envelope, multiple: bool = False, requeue: bool = True
-    ) -> None:
-        """Sends nack message to broker."""
-        await self.channel.basic_client_nack(
-            delivery_tag=envelope.delivery_tag, multiple=multiple, requeue=requeue
-        )
-
-    async def reject_event(self, envelope: Envelope, requeue: bool = False) -> None:
-        """Informs for the message broker that event message was rejected."""
-        await self.channel.basic_reject(
-            delivery_tag=envelope.delivery_tag, requeue=requeue
-        )
-
-    async def qos(
-        self,
-        prefetch_size: int = 0,
-        prefetch_count: int = 0,
-        connection_global: bool = False,
-    ) -> None:
-        """Configure qos feature in the subscriber channel."""
-        await self.channel.basic_qos(
-            prefetch_size=prefetch_size,
-            prefetch_count=prefetch_count,
-            connection_global=connection_global,
-        )
+                    await self._dlx.send_event(cause, message)
+                except Exception:
+                    logger.warning("DLQ send failed in error path", exc_info=True)
+                await message.ack()
